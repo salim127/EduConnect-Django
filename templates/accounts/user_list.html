@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs{% endblock %}
+{% block page_title %}Utilisateurs{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Administration</li><li class="breadcrumb-item active">Utilisateurs</li>{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Gestion des utilisateurs</h2><p class="text-muted mb-0">{{ paginator.count }} utilisateur{{ paginator.count|pluralize }}</p></div>
+  {% if perms.auth.add_user %}<a href="{% url 'accounts:user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Ajouter un utilisateur</a>{% endif %}
+</div>
+<form class="card-x card-pad mb-4" method="get"><div class="row g-2 align-items-end">
+  <div class="col-md-4"><label class="form-label">Recherche</label><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Nom, identifiant, e-mail…"></div>
+  <div class="col-md-3 col-6"><label class="form-label">Rôle</label><select class="form-select" name="role"><option value="">Tous</option>{% for r in roles %}<option value="{{ r.pk }}" {% if request.GET.role == r.pk|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-2 col-6"><label class="form-label">Statut</label><select class="form-select" name="actif"><option value="">Tous</option><option value="1" {% if request.GET.actif == "1" %}selected{% endif %}>Actifs</option><option value="0" {% if request.GET.actif == "0" %}selected{% endif %}>Désactivés</option></select></div>
+  <div class="col-md-3 d-flex gap-2"><button class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i> Filtrer</button><a href="{% url 'accounts:user_list' %}" class="btn btn-soft"><i class="bi bi-x-lg"></i></a></div>
+</div></form>
+
+{% if page_obj %}
+<div class="card-x overflow-hidden"><div class="table-responsive"><table class="table table-x">
+  <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Inscrit le</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>
+  <tbody>
+  {% for u in page_obj %}
+  <tr>
+    <td><div class="d-flex align-items-center gap-3"><span class="avatar">{{ u.first_name|default:u.username|first|upper }}</span><div><strong>{{ u.get_full_name|default:u.username }}</strong><div class="small text-muted">@{{ u.username }} · {{ u.email|default:"—" }}</div></div></div></td>
+    <td><span class="badge badge-soft badge-primary">{{ u.groups.all.0.name|default:"Sans rôle" }}</span></td>
+    <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+    <td>{% if u.is_active %}<span class="badge badge-soft badge-teal">Actif</span>{% else %}<span class="badge badge-soft badge-gray">Désactivé</span>{% endif %}</td>
+    <td class="text-end text-nowrap">
+      {% if perms.auth.change_user %}
+      <a href="{% url 'accounts:user_update' u.pk %}" class="btn btn-outline-primary btn-icon" title="Modifier"><i class="bi bi-pencil"></i></a>
+      {% if u != user %}<form method="post" action="{% url 'accounts:user_toggle' u.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-soft btn-icon" title="{% if u.is_active %}Désactiver{% else %}Activer{% endif %}"><i class="bi {% if u.is_active %}bi-person-slash{% else %}bi-person-check{% endif %}"></i></button></form>{% endif %}
+      {% endif %}
+      {% if perms.auth.delete_user and u != user and not u.is_superuser %}<button class="btn btn-outline-danger btn-icon" title="Supprimer" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'accounts:user_delete' u.pk %}" data-name="{{ u.username }}"><i class="bi bi-trash"></i></button>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div></div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty.html" with icon="bi-people" title="Aucun utilisateur trouvé" text="Aucun résultat pour ces critères." %}
+{% endif %}
+{% endblock %}

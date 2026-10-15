@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Catégories{% endblock %}
+{% block page_title %}Catégories{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Ressources</li><li class="breadcrumb-item active">Catégories</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Catégories de ressources</h2><p class="text-muted mb-0">Exemples de classement</p></div>{% include "components/soon_button.html" with label="Ajouter une catégorie" %}</div>
+<div class="row g-4">
+  {% for c in categories %}
+  <div class="col-md-6 col-xl-4"><div class="card-x hover card-pad h-100 d-flex align-items-center gap-3">
+    <div class="icon-box tone-{{ c.couleur }}"><i class="bi {{ c.icone }}"></i></div>
+    <div class="flex-fill"><strong>{{ c.nom }}</strong><div class="small text-muted">{{ c.nb }} ressources (exemple)</div></div>
+    <span class="badge-demo">Démo</span>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

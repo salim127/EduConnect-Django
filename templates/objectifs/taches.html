@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Mes tâches{% endblock %}
+{% block page_title %}Mes tâches{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Objectifs</li><li class="breadcrumb-item active">Mes tâches</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Listes de tâches</h2><p class="text-muted mb-0">Exemples en lecture seule</p></div>{% include "components/soon_button.html" with label="Nouvelle tâche" %}</div>
+<div class="row g-4">
+  {% for g in groupes %}
+  <div class="col-lg-6"><div class="card-x card-pad h-100">
+    <div class="d-flex justify-content-between mb-2"><h6 class="mb-0">{{ g.objectif }}</h6><span class="badge-demo">Démo</span></div>
+    {% for t in g.taches %}
+    <div class="task-item {% if t.fait %}done{% endif %}"><input class="form-check-input mt-0" type="checkbox" disabled {% if t.fait %}checked{% endif %}><span>{{ t.titre }}</span></div>
+    {% endfor %}
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

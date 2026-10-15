@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+{% block content %}
+<div class="card-x card-pad mb-4 text-white border-0" style="background:linear-gradient(120deg,var(--indigo),#5b50c9 60%,var(--teal))">
+  <h3 class="mb-1">Bonjour {{ user.first_name|default:user.username }} 👋</h3>
+  <p class="mb-0 opacity-75">Bienvenue sur votre espace — rôle : <strong>{{ user.groups.first.name|default:"Utilisateur" }}</strong>.</p>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3"><h5 class="mb-0">Statistiques</h5><span class="badge badge-soft badge-teal">Données réelles</span></div>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="card-x stat"><div class="icon-box tone-primary"><i class="bi bi-journal-bookmark"></i></div><div><div class="num">{{ nb_cours }}</div><div class="text-muted small">Cours</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card-x stat"><div class="icon-box tone-teal"><i class="bi bi-pencil-square"></i></div><div><div class="num">{{ nb_exercices }}</div><div class="text-muted small">Exercices</div></div></div></div>
+  {% if perms.auth.view_user %}<div class="col-sm-6 col-xl-3"><div class="card-x stat"><div class="icon-box tone-amber"><i class="bi bi-people"></i></div><div><div class="num">{{ nb_users }}</div><div class="text-muted small">Utilisateurs</div></div></div></div>{% endif %}
+  {% if perms.auth.view_group %}<div class="col-sm-6 col-xl-3"><div class="card-x stat"><div class="icon-box tone-primary"><i class="bi bi-shield-lock"></i></div><div><div class="num">{{ nb_roles }}</div><div class="text-muted small">Rôles</div></div></div></div>{% endif %}
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">Cours récents</h5><a href="{% url 'pedagogie:cours_list' %}" class="small fw-semibold">Voir tout →</a></div>
+    <div class="row g-3">
+      {% for c in recent_cours %}
+      <div class="col-md-4"><a href="{{ c.get_absolute_url }}" class="card-x hover d-block text-reset h-100">
+        <div class="course-cover {% cycle '' 'c-1' 'c-2' %}" style="height:80px"><i class="bi bi-mortarboard"></i></div>
+        <div class="card-pad p-3"><span class="badge badge-soft badge-primary mb-2">{{ c.matiere }}</span><h6 class="mb-1">{{ c.titre }}</h6><div class="small text-muted">{{ c.get_niveau_display }}</div></div>
+      </a></div>
+      {% empty %}
+      <div class="col-12">{% include "components/empty.html" with icon="bi-journal" title="Aucun cours" text="Les cours apparaîtront ici dès qu'ils seront créés." %}</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <h5 class="mb-3">Actions rapides</h5>
+    <div class="card-x card-pad d-grid gap-2">
+      {% if perms.pedagogie.add_cours %}<a href="{% url 'pedagogie:cours_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nouveau cours</a>{% endif %}
+      {% if perms.pedagogie.add_exercice %}<a href="{% url 'pedagogie:exercice_create' %}" class="btn btn-teal"><i class="bi bi-plus-lg me-1"></i>Nouvel exercice</a>{% endif %}
+      {% if perms.auth.add_user %}<a href="{% url 'accounts:user_create' %}" class="btn btn-soft"><i class="bi bi-person-plus me-1"></i>Ajouter un utilisateur</a>{% endif %}
+      <a href="{% url 'pedagogie:cours_list' %}" class="btn btn-soft"><i class="bi bi-search me-1"></i>Parcourir les cours</a>
+    </div>
+    <div class="card-x card-pad mt-3">
+      <h6>Exercices par difficulté</h6>
+      <canvas id="chart" height="170"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3"><h5 class="mb-0">Aperçu des autres modules</h5><span class="badge-demo">Démonstration</span></div>
+<div class="row g-3">
+  <div class="col-md-4"><a href="{% url 'coaching:sessions' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-teal mb-2"><i class="bi bi-calendar-event"></i></div><strong>Prochaine session (exemple)</strong><div class="small text-muted">Atelier méthodologie de révision · Lun. 14:00</div></a></div>
+  <div class="col-md-4"><a href="{% url 'ressources:bibliotheque' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-amber mb-2"><i class="bi bi-collection-play"></i></div><strong>Ressource (exemple)</strong><div class="small text-muted">Guide Python pour débutants · PDF</div></a></div>
+  <div class="col-md-4"><a href="{% url 'objectifs:objectifs' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-primary mb-2"><i class="bi bi-bullseye"></i></div><strong>Objectif (exemple)</strong><div class="small text-muted mb-2">Maîtriser les bases de Python</div><div class="progress"><div class="progress-bar" style="width:70%"></div></div></a></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{{ chart_labels|json_script:"chart-labels" }}{{ chart_data|json_script:"chart-data" }}
+<script>
+new Chart(document.getElementById('chart'), {
+  type: 'doughnut',
+  data: { labels: JSON.parse(document.getElementById('chart-labels').textContent),
+          datasets: [{ data: JSON.parse(document.getElementById('chart-data').textContent), backgroundColor: ['#00B8A9', '#F9A826', '#3D348B'], borderWidth: 0 }] },
+  options: { cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

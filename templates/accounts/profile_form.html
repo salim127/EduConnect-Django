@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Modifier mon profil{% endblock %}
+{% block page_title %}Modifier mon profil{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Compte</li><li class="breadcrumb-item"><a href="{% url 'accounts:profile' %}">Mon profil</a></li><li class="breadcrumb-item active">Modifier</li>{% endblock %}
+{% block content %}
+<form method="post" class="card-x card-pad" style="max-width:680px" novalidate>{% csrf_token %}
+  <div class="row"><div class="col-md-6">{% include "components/field.html" with field=form.first_name %}</div><div class="col-md-6">{% include "components/field.html" with field=form.last_name %}</div></div>
+  {% include "components/field.html" with field=form.username %}
+  {% include "components/field.html" with field=form.email %}
+  <div class="d-flex gap-2"><button class="btn btn-primary">Enregistrer</button><a href="{% url 'accounts:profile' %}" class="btn btn-soft">Annuler</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+{# Usage : {% include "components/field.html" with field=form.titre %} (+ hint="..." optionnel) #}
+<div class="field mb-3">
+  {% if field.field.widget.input_type == "checkbox" %}
+    <div class="form-check form-switch">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+  {% else %}
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+    {{ field }}
+  {% endif %}
+  {% if hint %}<div class="form-text" id="answer-hint">{{ hint }}</div>{% elif field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+  {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+</div>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Modifier l'exercice{% else %}Nouvel exercice{% endif %}{% endblock %}
+{% block page_title %}{% if object %}Modifier l'exercice{% else %}Nouvel exercice{% endif %}{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item"><a href="{% url 'pedagogie:exercice_list' %}">Exercices</a></li><li class="breadcrumb-item active">{% if object %}Modifier{% else %}Ajouter{% endif %}</li>{% endblock %}
+
+{% block content %}
+{% if not form.fields.cours.queryset.exists %}
+  {% include "components/empty.html" with icon="bi-journal-plus" title="Aucun cours disponible" text="Créez d'abord un cours pour pouvoir lui associer des exercices." %}
+{% else %}
+<form method="post" class="card-x card-pad" style="max-width: 820px" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  {% include "components/field.html" with field=form.titre %}
+  <div class="row">
+    <div class="col-md-4">{% include "components/field.html" with field=form.cours %}</div>
+    <div class="col-md-4">{% include "components/field.html" with field=form.type_exercice %}</div>
+    <div class="col-md-4">{% include "components/field.html" with field=form.difficulte %}</div>
+  </div>
+  {% include "components/field.html" with field=form.question %}
+  {% include "components/field.html" with field=form.propositions %}
+  {% include "components/field.html" with field=form.bonne_reponse hint="Recopiez exactement la bonne proposition." %}
+  <div class="d-flex gap-2 pt-2"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button><a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'pedagogie:exercice_list' %}{% endif %}" class="btn btn-soft">Annuler</a></div>
+</form>
+{% endif %}
+{% endblock %}

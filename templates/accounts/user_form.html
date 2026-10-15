@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Modifier l'utilisateur{% else %}Nouvel utilisateur{% endif %}{% endblock %}
+{% block page_title %}{% if object %}Modifier l'utilisateur{% else %}Nouvel utilisateur{% endif %}{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Administration</li><li class="breadcrumb-item"><a href="{% url 'accounts:user_list' %}">Utilisateurs</a></li><li class="breadcrumb-item active">{% if object %}Modifier{% else %}Ajouter{% endif %}</li>{% endblock %}
+{% block content %}
+<form method="post" class="card-x card-pad" style="max-width:720px" novalidate>{% csrf_token %}
+  <div class="row"><div class="col-md-6">{% include "components/field.html" with field=form.first_name %}</div><div class="col-md-6">{% include "components/field.html" with field=form.last_name %}</div></div>
+  <div class="row"><div class="col-md-6">{% include "components/field.html" with field=form.username %}</div><div class="col-md-6">{% include "components/field.html" with field=form.email %}</div></div>
+  {% if form.password1 %}<div class="row"><div class="col-md-6">{% include "components/field.html" with field=form.password1 %}</div><div class="col-md-6">{% include "components/field.html" with field=form.password2 %}</div></div>{% endif %}
+  {% include "components/field.html" with field=form.role %}
+  {% include "components/field.html" with field=form.is_active %}
+  <div class="d-flex gap-2 pt-2"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button><a href="{% url 'accounts:user_list' %}" class="btn btn-soft">Annuler</a></div>
+</form>
+{% endblock %}

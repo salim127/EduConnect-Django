@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Conseils pédagogiques{% endblock %}
+{% block page_title %}Conseils pédagogiques{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Coaching</li><li class="breadcrumb-item active">Conseils</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Conseils pour mieux apprendre</h2><p class="text-muted mb-0">Exemples de conseils rédigés par les coachs</p></div>{% include "components/soon_button.html" with label="Ajouter un conseil" %}</div>
+<div class="row g-4">
+  {% for c in conseils %}
+  <div class="col-md-6 col-xl-4"><div class="card-x hover card-pad h-100">
+    <div class="d-flex justify-content-between mb-3"><div class="icon-box tone-{% cycle 'primary' 'teal' 'amber' %}"><i class="bi {{ c.icone }}"></i></div><span class="badge-demo align-self-start">Démo</span></div>
+    <span class="badge badge-soft badge-gray mb-2">{{ c.categorie }}</span>
+    <h5>{{ c.titre }}</h5><p class="text-muted small mb-0">{{ c.texte }}</p>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

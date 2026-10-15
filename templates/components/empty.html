@@ -1,0 +1,7 @@
+{# Usage : {% include "components/empty.html" with icon="bi-journal" title="..." text="..." %} #}
+<div class="card-x empty">
+  <div class="icon-box tone-primary"><i class="bi {{ icon|default:'bi-inbox' }}"></i></div>
+  <h5>{{ title }}</h5>
+  <p class="text-muted mb-3">{{ text }}</p>
+  {{ extra|default:"" }}
+</div>

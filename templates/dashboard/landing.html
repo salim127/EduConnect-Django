@@ -1,0 +1,54 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>{% include "components/head.html" %}<title>Hub Éducatif & Créatif Multimodal</title></head>
+<body>
+<section class="hero">
+  <div class="container">
+    <nav class="pub-nav d-flex align-items-center justify-content-between">
+      <a href="{% url 'dashboard:landing' %}" class="d-flex align-items-center gap-2 text-white fw-bold"><img src="{% static 'images/logo.svg' %}" width="42" alt="">Hub Éducatif</a>
+      <div class="d-flex gap-2"><a href="{% url 'accounts:login' %}" class="btn btn-outline-light">Se connecter</a><a href="{% url 'accounts:register' %}" class="btn btn-warning text-dark d-none d-sm-inline-block">Créer un compte</a></div>
+    </nav>
+    <div class="row align-items-center g-5 pt-5">
+      <div class="col-lg-6">
+        <span class="badge badge-soft bg-white bg-opacity-25 mb-3">🎓 Plateforme éducative multimodale</span>
+        <h1>Apprendre, enseigner et <em>progresser</em> ensemble.</h1>
+        <p class="lead mt-3">Un hub unique pour créer des cours, proposer des exercices, accompagner les apprenants et suivre leurs objectifs.</p>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          <a href="{% url 'accounts:register' %}" class="btn btn-warning btn-lg text-dark">Créer un compte</a>
+          <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg">Se connecter</a>
+        </div>
+      </div>
+      <div class="col-lg-6 d-none d-lg-block">
+        <div class="hero-mock">
+          <div class="d-flex justify-content-between mb-3"><strong>Introduction à Python</strong><span class="badge badge-soft badge-teal">Débutant</span></div>
+          <div class="progress mb-3"><div class="progress-bar teal" style="width:68%"></div></div>
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-2" style="background:var(--indigo-50)"><i class="bi bi-pencil-square fs-4 text-primary"></i><div><strong>Variables Python</strong><div class="small text-muted">QCM · Facile</div></div></div>
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:var(--amber-50)"><i class="bi bi-lightbulb fs-4" style="color:#b06f00"></i><div><strong>Conseil du jour</strong><div class="small text-muted">Révisez par blocs de 25 minutes.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container" style="margin-top:-3rem">
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-3"><div class="card-x hover module-card"><div class="icon-box tone-primary mb-3"><i class="bi bi-journal-bookmark"></i></div><h5>Pédagogie</h5><p class="text-muted small mb-0">Cours et exercices (QCM, vrai/faux, questions ouvertes).</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card-x hover module-card"><div class="icon-box tone-teal mb-3"><i class="bi bi-people"></i></div><h5>Coaching</h5><p class="text-muted small mb-0">Sessions d'accompagnement et conseils pédagogiques.</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card-x hover module-card"><div class="icon-box tone-amber mb-3"><i class="bi bi-collection-play"></i></div><h5>Ressources</h5><p class="text-muted small mb-0">Bibliothèque de PDF, vidéos et supports.</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card-x hover module-card"><div class="icon-box tone-primary mb-3"><i class="bi bi-bullseye"></i></div><h5>Objectifs</h5><p class="text-muted small mb-0">Objectifs d'apprentissage et suivi des tâches.</p></div></div>
+  </div>
+</section>
+
+<section class="container py-5 my-4">
+  <div class="text-center mb-5"><h2 class="section-title">Pourquoi choisir le Hub ?</h2><p class="text-muted">Une expérience claire, adaptée à chaque rôle.</p></div>
+  <div class="row g-4 text-center">
+    <div class="col-md-4"><div class="icon-box tone-teal mx-auto mb-3"><i class="bi bi-shield-check"></i></div><h5>Accès par rôle</h5><p class="text-muted">Administrateur, enseignant ou apprenant : chacun voit ce dont il a besoin.</p></div>
+    <div class="col-md-4"><div class="icon-box tone-primary mx-auto mb-3"><i class="bi bi-phone"></i></div><h5>Responsive</h5><p class="text-muted">Une interface fluide sur ordinateur, tablette et mobile.</p></div>
+    <div class="col-md-4"><div class="icon-box tone-amber mx-auto mb-3"><i class="bi bi-lightning-charge"></i></div><h5>Simple et rapide</h5><p class="text-muted">Créez un cours ou un exercice en quelques clics.</p></div>
+  </div>
+</section>
+
+<footer class="footer-pub"><div class="container d-flex flex-wrap justify-content-between gap-2"><span>© Hub Éducatif & Créatif Multimodal — Projet universitaire</span><span>Django · Bootstrap 5</span></div></footer>
+{% include "components/scripts.html" %}
+</body>
+</html>

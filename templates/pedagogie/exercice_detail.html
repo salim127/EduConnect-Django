@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load pedagogie_tags %}
+{% block title %}{{ object.titre }}{% endblock %}
+{% block page_title %}Détail de l'exercice{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item"><a href="{% url 'pedagogie:exercice_list' %}">Exercices</a></li><li class="breadcrumb-item active">{{ object.titre|truncatechars:30 }}</li>{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card-x card-pad">
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge badge-soft badge-primary">{{ object.get_type_exercice_display }}</span>
+        <span class="badge badge-soft {% if object.difficulte == 'facile' %}badge-teal{% elif object.difficulte == 'moyen' %}badge-amber{% else %}badge-danger{% endif %}">{{ object.get_difficulte_display }}</span>
+      </div>
+      <h3>{{ object.titre }}</h3>
+      <h6 class="text-muted text-uppercase small mt-4">Question</h6>
+      <p class="fs-5" style="white-space: pre-line">{{ object.question }}</p>
+
+      <form method="post" class="mt-4">{% csrf_token %}
+        <h6 class="text-muted text-uppercase small">Votre réponse</h6>
+        {% if object.type_exercice == 'qcm' %}
+          <div class="list-group">
+          {% for p in object.liste_propositions %}
+            <label class="list-group-item d-flex align-items-center gap-3 {% if reponse_donnee and p|lower == object.bonne_reponse|lower %}list-group-item-success{% elif reponse_donnee and p == reponse_donnee %}list-group-item-danger{% endif %}" style="cursor:pointer">
+              <input class="form-check-input mt-0" type="radio" name="reponse" value="{{ p }}" {% if p == reponse_donnee %}checked{% endif %} required>
+              <span class="badge badge-soft badge-gray">{{ forloop.counter }}</span>{{ p }}
+            </label>
+          {% endfor %}
+          </div>
+        {% elif object.type_exercice == 'vf' %}
+          <div class="d-flex gap-2">
+            <label class="chip"><input class="form-check-input me-2" type="radio" name="reponse" value="Vrai" {% if reponse_donnee == 'Vrai' %}checked{% endif %} required>Vrai</label>
+            <label class="chip"><input class="form-check-input me-2" type="radio" name="reponse" value="Faux" {% if reponse_donnee == 'Faux' %}checked{% endif %} required>Faux</label>
+          </div>
+        {% else %}
+          <textarea class="form-control" name="reponse" rows="3" placeholder="Saisissez votre réponse…" required>{{ reponse_donnee }}</textarea>
+        {% endif %}
+        <button class="btn btn-primary mt-3"><i class="bi bi-check2-circle me-1"></i>Vérifier ma réponse</button>
+      </form>
+
+      {% if erreur_reponse %}<div class="alert alert-warning mt-3 mb-0">{{ erreur_reponse }}</div>{% endif %}
+      {% if reponse_donnee %}
+        {% if resultat_juste %}
+          <div class="alert alert-success mt-3 mb-0"><i class="bi bi-check-circle-fill me-2"></i><strong>Bonne réponse !</strong> Bravo.</div>
+        {% else %}
+          <div class="alert alert-danger mt-3 mb-0"><i class="bi bi-x-circle-fill me-2"></i><strong>Ce n'est pas la bonne réponse.</strong> La réponse attendue est : <strong>{{ object.bonne_reponse }}</strong></div>
+        {% endif %}
+        <p class="small text-muted mt-2 mb-0">Vérification instantanée : le résultat n'est pas enregistré.</p>
+      {% endif %}
+
+      {% if object|can_edit:user %}
+      <div class="alert mt-4 mb-0" style="background:var(--teal-50);color:#006b62"><i class="bi bi-check-circle me-2"></i><strong>Bonne réponse :</strong> {{ object.bonne_reponse }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card-x card-pad mb-3">
+      <h6 class="text-muted text-uppercase small">Cours associé</h6>
+      <a href="{{ object.cours.get_absolute_url }}" class="fw-semibold">{{ object.cours.titre }}</a>
+      <div class="small text-muted">{{ object.cours.matiere }} · {{ object.cours.get_niveau_display }}</div>
+    </div>
+    <div class="card-x card-pad d-grid gap-2">
+      {% if object|can_edit:user %}<a href="{% url 'pedagogie:exercice_update' object.pk %}" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Modifier</a>{% endif %}
+      {% if object|can_delete:user %}<button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'pedagogie:exercice_delete' object.pk %}" data-name="{{ object.titre }}"><i class="bi bi-trash me-1"></i>Supprimer</button>{% endif %}
+      <a href="{% url 'pedagogie:exercice_list' %}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Retour aux exercices</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

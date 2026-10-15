@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load pedagogie_tags %}
+{% block title %}Exercices{% endblock %}
+{% block page_title %}Exercices{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item active">Exercices</li>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><h2>Banque d'exercices</h2><p class="text-muted mb-0">{{ paginator.count }} exercice{{ paginator.count|pluralize }}</p></div>
+  {% if perms.pedagogie.add_exercice %}<a href="{% url 'pedagogie:exercice_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Ajouter un exercice</a>{% endif %}
+</div>
+
+<form class="card-x card-pad mb-4" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-lg-3"><label class="form-label">Recherche</label><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Titre ou question…"></div>
+    <div class="col-lg-3 col-md-6"><label class="form-label">Cours</label>
+      <select class="form-select" name="cours"><option value="">Tous</option>{% for c in cours_all %}<option value="{{ c.pk }}" {% if request.GET.cours == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.titre }}</option>{% endfor %}</select></div>
+    <div class="col-lg-2 col-md-3 col-6"><label class="form-label">Type</label>
+      <select class="form-select" name="type_exercice"><option value="">Tous</option>{% for k, l in types %}<option value="{{ k }}" {% if request.GET.type_exercice == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-lg-2 col-md-3 col-6"><label class="form-label">Difficulté</label>
+      <select class="form-select" name="difficulte"><option value="">Toutes</option>{% for k, l in difficultes %}<option value="{{ k }}" {% if request.GET.difficulte == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-lg-2 d-flex gap-2"><button class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i> Filtrer</button><a href="{% url 'pedagogie:exercice_list' %}" class="btn btn-soft" title="Réinitialiser"><i class="bi bi-x-lg"></i></a></div>
+  </div>
+</form>
+
+{% if page_obj %}
+<div class="card-x overflow-hidden"><div class="table-responsive">
+  <table class="table table-x align-middle">
+    <thead><tr><th>Exercice</th><th>Cours</th><th>Type</th><th>Difficulté</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    {% for e in page_obj %}
+      <tr>
+        <td><a href="{{ e.get_absolute_url }}" class="fw-semibold text-reset">{{ e.titre }}</a><div class="small text-muted clamp-2" style="max-width:380px">{{ e.question }}</div></td>
+        <td><a href="{{ e.cours.get_absolute_url }}">{{ e.cours.titre }}</a></td>
+        <td><span class="badge badge-soft badge-primary">{{ e.get_type_exercice_display }}</span></td>
+        <td><span class="badge badge-soft {% if e.difficulte == 'facile' %}badge-teal{% elif e.difficulte == 'moyen' %}badge-amber{% else %}badge-danger{% endif %}">{{ e.get_difficulte_display }}</span></td>
+        <td class="text-end text-nowrap">
+          <a href="{{ e.get_absolute_url }}" class="btn btn-soft btn-icon" title="Consulter"><i class="bi bi-eye"></i></a>
+          {% if e|can_edit:user %}<a href="{% url 'pedagogie:exercice_update' e.pk %}" class="btn btn-outline-primary btn-icon" title="Modifier"><i class="bi bi-pencil"></i></a>{% endif %}
+          {% if e|can_delete:user %}<button class="btn btn-outline-danger btn-icon" title="Supprimer" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'pedagogie:exercice_delete' e.pk %}" data-name="{{ e.titre }}"><i class="bi bi-trash"></i></button>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty.html" with icon="bi-pencil-square" title="Aucun exercice trouvé" text="Modifiez vos filtres ou créez un nouvel exercice." %}
+{% endif %}
+{% endblock %}

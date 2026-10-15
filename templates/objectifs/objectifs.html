@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Mes objectifs{% endblock %}
+{% block page_title %}Mes objectifs{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Objectifs</li><li class="breadcrumb-item active">Mes objectifs</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Objectifs d'apprentissage</h2><p class="text-muted mb-0">Pourcentages fictifs, à titre de démonstration</p></div>{% include "components/soon_button.html" with label="Nouvel objectif" %}</div>
+<div class="row g-4">
+  {% for o in objectifs %}
+  <div class="col-md-6"><div class="card-x hover card-pad h-100">
+    <div class="d-flex gap-3 mb-3">
+      <div class="icon-box tone-{{ o.couleur }}"><i class="bi {{ o.icone }}"></i></div>
+      <div class="flex-fill"><strong>{{ o.titre }}</strong><div class="small text-muted">Échéance : {{ o.echeance }}</div></div>
+      <span class="badge-demo align-self-start">Démo</span>
+    </div>
+    <div class="d-flex justify-content-between small fw-semibold mb-1"><span>Progression</span><span>{{ o.progression }}%</span></div>
+    <div class="progress"><div class="progress-bar {% if o.couleur != 'primary' %}{{ o.couleur }}{% endif %}" style="width:{{ o.progression }}%"></div></div>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

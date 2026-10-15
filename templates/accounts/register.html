@@ -1,0 +1,16 @@
+{% extends "auth_base.html" %}
+{% block title %}Inscription{% endblock %}
+{% block content %}
+<div class="card-x card-pad p-4">
+  <h3>Créer un compte</h3><p class="text-muted">Rejoignez la plateforme en tant qu'apprenant.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    <div class="row"><div class="col-6">{% include "components/field.html" with field=form.first_name %}</div><div class="col-6">{% include "components/field.html" with field=form.last_name %}</div></div>
+    {% include "components/field.html" with field=form.username %}
+    {% include "components/field.html" with field=form.email %}
+    {% include "components/field.html" with field=form.password1 %}
+    {% include "components/field.html" with field=form.password2 %}
+    <button class="btn btn-primary w-100 mt-2">Créer mon compte</button>
+  </form>
+  <p class="text-center text-muted small mt-4 mb-0">Déjà inscrit ? <a href="{% url 'accounts:login' %}" class="fw-semibold">Se connecter</a></p>
+</div>
+{% endblock %}

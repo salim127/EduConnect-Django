@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Bibliothèque{% endblock %}
+{% block page_title %}Bibliothèque{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Ressources</li><li class="breadcrumb-item active">Bibliothèque</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Bibliothèque de ressources</h2><p class="text-muted mb-0">Filtres visuels de démonstration (aucune donnée enregistrée)</p></div>{% include "components/soon_button.html" with label="Ajouter une ressource" %}</div>
+<div class="card-x card-pad mb-4 d-flex flex-wrap gap-3 align-items-center">
+  <div class="topbar-search flex-fill" style="max-width:none"><i class="bi bi-search"></i><input class="form-control" data-demo-search placeholder="Rechercher une ressource…"></div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="chip active" data-filter="all">Tout</button><button class="chip" data-filter="pdf"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+    <button class="chip" data-filter="video"><i class="bi bi-play-circle me-1"></i>Vidéos</button><button class="chip" data-filter="support"><i class="bi bi-easel me-1"></i>Supports</button>
+  </div>
+</div>
+<div class="row g-4">
+  {% for r in ressources %}
+  <div class="col-md-6 col-xl-4" data-kind="{{ r.type }}"><div class="card-x hover card-pad h-100">
+    <div class="d-flex justify-content-between mb-3">
+      <div class="icon-box {% if r.type == 'pdf' %}tone-amber{% elif r.type == 'video' %}tone-teal{% else %}tone-primary{% endif %}"><i class="bi {% if r.type == 'pdf' %}bi-file-earmark-pdf{% elif r.type == 'video' %}bi-play-circle{% else %}bi-easel{% endif %}"></i></div>
+      <span class="badge-demo align-self-start">Démo</span>
+    </div>
+    <h6>{{ r.titre }}</h6><div class="small text-muted mb-3">{{ r.categorie }} · {{ r.info }}</div>
+    <button class="btn btn-soon btn-sm" disabled>Ouvrir · Bientôt disponible</button>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

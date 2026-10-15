@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Compte</li><li class="breadcrumb-item active">Mon profil</li>{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4"><div class="card-x card-pad text-center">
+    <span class="avatar lg mb-3">{{ user.first_name|default:user.username|first|upper }}</span>
+    <h4 class="mb-1">{{ user.get_full_name|default:user.username }}</h4>
+    <span class="badge badge-soft badge-primary">{{ user.groups.first.name|default:"Sans rôle" }}</span>
+    <div class="d-grid gap-2 mt-4">
+      <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Modifier le profil</a>
+      <a href="{% url 'accounts:password' %}" class="btn btn-soft"><i class="bi bi-key me-1"></i>Changer le mot de passe</a>
+    </div>
+  </div></div>
+  <div class="col-lg-8"><div class="card-x card-pad">
+    <h5 class="mb-3">Informations</h5>
+    <dl class="row mb-0">
+      <dt class="col-sm-4 text-muted">Nom d'utilisateur</dt><dd class="col-sm-8">{{ user.username }}</dd>
+      <dt class="col-sm-4 text-muted">Prénom</dt><dd class="col-sm-8">{{ user.first_name|default:"—" }}</dd>
+      <dt class="col-sm-4 text-muted">Nom</dt><dd class="col-sm-8">{{ user.last_name|default:"—" }}</dd>
+      <dt class="col-sm-4 text-muted">E-mail</dt><dd class="col-sm-8">{{ user.email|default:"—" }}</dd>
+      <dt class="col-sm-4 text-muted">Membre depuis</dt><dd class="col-sm-8">{{ user.date_joined|date:"d F Y" }}</dd>
+      <dt class="col-sm-4 text-muted">Statut</dt><dd class="col-sm-8"><span class="badge badge-soft badge-teal">Actif</span></dd>
+    </dl>
+  </div></div>
+</div>
+{% endblock %}

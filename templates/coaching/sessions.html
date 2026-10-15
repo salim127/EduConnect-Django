@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sessions de coaching{% endblock %}
+{% block page_title %}Sessions de coaching{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Coaching</li><li class="breadcrumb-item active">Sessions</li>{% endblock %}
+{% block content %}
+{% include "components/demo_banner.html" %}
+<div class="page-head"><div><h2>Mes sessions</h2><p class="text-muted mb-0">Aperçu visuel du module de coaching</p></div>{% include "components/soon_button.html" with label="Planifier une session" %}</div>
+<div class="row g-4">
+  <div class="col-xl-7"><div class="card-x card-pad">
+    <div class="d-flex justify-content-between mb-2"><h5 class="mb-0">{{ mois }}</h5><span class="badge-demo">Démonstration</span></div>
+    <table class="cal"><thead><tr>{% for j in "LMMJVSD" %}<th>{{ j }}</th>{% endfor %}</tr></thead><tbody>
+    {% for week in weeks %}<tr>{% for d in week %}
+      <td class="{% if not d.n %}empty-day{% elif d.n == today %}today{% endif %}">{% if d.n %}{{ d.n }}{% if d.event %}<span class="ev {{ d.event.couleur }}">{{ d.event.titre }}</span>{% endif %}{% endif %}</td>
+    {% endfor %}</tr>{% endfor %}
+    </tbody></table>
+  </div></div>
+  <div class="col-xl-5">
+    {% for s in sessions %}
+    <div class="card-x hover card-pad mb-3 d-flex gap-3">
+      <div class="icon-box tone-{{ s.couleur }}"><i class="bi bi-camera-video"></i></div>
+      <div class="flex-fill"><div class="d-flex justify-content-between"><strong>{{ s.titre }}</strong><span class="badge-demo">Démo</span></div>
+        <div class="small text-muted">{{ s.coach }} · {{ s.date }} · {{ s.duree }}</div>
+        <span class="badge badge-soft badge-gray mt-2">{{ s.mode }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

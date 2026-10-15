@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load pedagogie_tags %}
+{% block title %}Cours{% endblock %}
+{% block page_title %}Cours{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item active">Cours</li>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><h2>Catalogue des cours</h2><p class="text-muted mb-0">{{ paginator.count }} cours disponible{{ paginator.count|pluralize }}</p></div>
+  {% if perms.pedagogie.add_cours %}<a href="{% url 'pedagogie:cours_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Ajouter un cours</a>{% endif %}
+</div>
+
+<form class="card-x card-pad mb-4" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5"><label class="form-label">Recherche</label><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Titre, description, matière…"></div>
+    <div class="col-md-3 col-6"><label class="form-label">Matière</label>
+      <select class="form-select" name="matiere"><option value="">Toutes</option>{% for m in matieres %}<option value="{{ m }}" {% if request.GET.matiere == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></div>
+    <div class="col-md-2 col-6"><label class="form-label">Niveau</label>
+      <select class="form-select" name="niveau"><option value="">Tous</option>{% for k, l in niveaux %}<option value="{{ k }}" {% if request.GET.niveau == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i> Filtrer</button><a href="{% url 'pedagogie:cours_list' %}" class="btn btn-soft" title="Réinitialiser"><i class="bi bi-x-lg"></i></a></div>
+  </div>
+</form>
+
+{% if page_obj %}
+<div class="row g-4">
+  {% for c in page_obj %}
+  <div class="col-md-6 col-xl-4">
+    <article class="card-x hover h-100 d-flex flex-column">
+      <div class="course-cover {% cycle '' 'c-1' 'c-2' %}">
+        <i class="bi bi-mortarboard"></i><span class="badge badge-soft bg-white text-dark">{{ c.matiere }}</span>
+      </div>
+      <div class="card-pad d-flex flex-column flex-fill">
+        <span class="badge badge-soft badge-primary align-self-start mb-2">{{ c.get_niveau_display }}</span>
+        <h5><a href="{{ c.get_absolute_url }}" class="text-reset stretched-link-off">{{ c.titre }}</a></h5>
+        <p class="text-muted small clamp-2">{{ c.description }}</p>
+        <div class="d-flex align-items-center gap-2 small text-muted mt-auto pt-2">
+          <span class="avatar" style="width:28px;height:28px;font-size:.7rem">{{ c.enseignant.first_name|default:c.enseignant.username|first|upper }}</span>
+          {{ c.enseignant.get_full_name|default:c.enseignant.username }} · {{ c.exercices.count }} exo.
+        </div>
+        <hr class="my-3">
+        <div class="d-flex gap-2">
+          <a href="{{ c.get_absolute_url }}" class="btn btn-soft btn-sm flex-fill"><i class="bi bi-eye me-1"></i>Consulter</a>
+          {% if c|can_edit:user %}<a href="{% url 'pedagogie:cours_update' c.pk %}" class="btn btn-outline-primary btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>{% endif %}
+          {% if c|can_delete:user %}<button class="btn btn-outline-danger btn-sm" title="Supprimer" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'pedagogie:cours_delete' c.pk %}" data-name="{{ c.titre }}"><i class="bi bi-trash"></i></button>{% endif %}
+        </div>
+      </div>
+    </article>
+  </div>
+  {% endfor %}
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty.html" with icon="bi-journal-x" title="Aucun cours trouvé" text="Modifiez vos filtres ou ajoutez un premier cours." %}
+{% endif %}
+{% endblock %}

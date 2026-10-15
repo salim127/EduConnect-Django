@@ -1,0 +1,23 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>{% include "components/head.html" %}<title>{% block title %}{% endblock %} · Hub Éducatif</title></head>
+<body>
+<div class="auth-wrap">
+  <aside class="auth-side">
+    <a href="{% url 'dashboard:landing' %}" class="d-flex align-items-center gap-2 text-white fw-bold mb-5"><img src="{% static 'images/logo.svg' %}" width="44" alt=""> Hub Éducatif & Créatif Multimodal</a>
+    <h2 class="display-6 fw-bold">Apprenez, enseignez et progressez au même endroit.</h2>
+    <p class="opacity-75 mt-3">Cours, exercices, coaching, ressources et objectifs réunis dans une seule plateforme.</p>
+    <ul class="list-unstyled mt-4 opacity-90">
+      <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Cours et exercices structurés</li>
+      <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Accès selon votre rôle</li>
+      <li><i class="bi bi-check-circle-fill text-warning me-2"></i>Interface moderne et responsive</li>
+    </ul>
+  </aside>
+  <section class="auth-form"><div class="auth-card">
+    {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </div></section>
+</div>
+{% include "components/scripts.html" %}
+</body>
+</html>
