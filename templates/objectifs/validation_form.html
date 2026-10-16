@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Valider le travail{% endblock %}
+{% block page_title %}{{ object.titre }}{% endblock %}
+{% block content %}
+<section class="card-x card-pad mb-3"><h2 class="h5">Travail soumis par {{ object.objectif.apprenant }}</h2>
+<p><strong>Consigne :</strong> {{ object.description|linebreaksbr }}</p>
+<p><strong>Critère de réussite :</strong> {{ object.objectif.critere_reussite|default:"À préciser" }}</p>
+{% if object.reponse %}<pre class="p-3 border rounded bg-light" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ object.reponse }}</pre>{% else %}<p class="text-muted">Cette ancienne tâche ne contient pas de réponse. Vous pouvez demander une reprise pour que l’apprenant ajoute son travail.</p>{% endif %}
+{% if object.date_soumission %}<p>Soumis le {{ object.date_soumission|date:"d/m/Y à H:i" }}</p>{% endif %}</section>
+<form method="post" class="card-x card-pad" novalidate>{% csrf_token %}{{ form.non_field_errors }}
+{% include "components/field.html" with field=form.statut %}
+<button class="btn btn-primary">Enregistrer la décision</button> <a class="btn btn-soft" href="{{ object.get_absolute_url }}">Annuler</a></form>
+{% endblock %}

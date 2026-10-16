@@ -27,8 +27,8 @@
     <a class="nav-link-x {% if v == 'ressources:categories' %}active{% endif %}" href="{% url 'ressources:categories' %}"><i class="bi bi-tags"></i><span class="label">Catégories</span><span class="tag" title="Démonstration"></span></a>
 
     <div class="nav-section">Objectifs</div>
-    <a class="nav-link-x {% if v == 'objectifs:objectifs' %}active{% endif %}" href="{% url 'objectifs:objectifs' %}"><i class="bi bi-bullseye"></i><span class="label">Mes objectifs</span><span class="tag" title="Démonstration"></span></a>
-    <a class="nav-link-x {% if v == 'objectifs:taches' %}active{% endif %}" href="{% url 'objectifs:taches' %}"><i class="bi bi-check2-square"></i><span class="label">Mes tâches</span><span class="tag" title="Démonstration"></span></a>
+    <a class="nav-link-x {% if v == 'objectifs:objectifs' or 'objectifs:objectif_' in v or 'objectifs:objectif_' in v %}active{% endif %}" href="{% url 'objectifs:objectifs' %}"><i class="bi bi-bullseye"></i><span class="label">Mes objectifs</span></a>
+    <a class="nav-link-x {% if v == 'objectifs:taches' or 'objectifs:tache_' in v or 'objectifs:tache_' in v %}active{% endif %}" href="{% url 'objectifs:taches' %}"><i class="bi bi-check2-square"></i><span class="label">Mes tâches</span></a>
 
     {% if perms.auth.view_user or perms.auth.view_group %}
     <div class="nav-section">Administration</div>

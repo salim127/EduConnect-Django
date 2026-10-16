@@ -44,11 +44,11 @@
   </div>
 </div>
 
-<div class="d-flex align-items-center gap-2 mb-3"><h5 class="mb-0">Aperçu des autres modules</h5><span class="badge-demo">Démonstration</span></div>
+<div class="d-flex align-items-center gap-2 mb-3"><h5 class="mb-0">Aperçu des autres modules</h5></div>
 <div class="row g-3">
   <div class="col-md-4"><a href="{% url 'coaching:sessions' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-teal mb-2"><i class="bi bi-calendar-event"></i></div><strong>Prochaine session (exemple)</strong><div class="small text-muted">Atelier méthodologie de révision · Lun. 14:00</div></a></div>
   <div class="col-md-4"><a href="{% url 'ressources:bibliotheque' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-amber mb-2"><i class="bi bi-collection-play"></i></div><strong>Ressource (exemple)</strong><div class="small text-muted">Guide Python pour débutants · PDF</div></a></div>
-  <div class="col-md-4"><a href="{% url 'objectifs:objectifs' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-primary mb-2"><i class="bi bi-bullseye"></i></div><strong>Objectif (exemple)</strong><div class="small text-muted mb-2">Maîtriser les bases de Python</div><div class="progress"><div class="progress-bar" style="width:70%"></div></div></a></div>
+  <div class="col-md-4"><a href="{% url 'objectifs:objectif_list' %}" class="card-x hover card-pad d-block text-reset h-100"><div class="icon-box tone-primary mb-2"><i class="bi bi-bullseye"></i></div><strong>Mes objectifs d’apprentissage</strong><div class="small text-muted mb-2">Gérer mes objectifs, organiser mes tâches et suivre ma progression.</div><span class="badge-soft badge-teal">Module disponible</span></a></div>
 </div>
 {% endblock %}
 

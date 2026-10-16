@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Mes tâches d’apprentissage{% endblock %}
+{% block page_title %}Mes tâches d’apprentissage{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between flex-wrap gap-3 mb-4"><form method="get" class="d-flex flex-wrap gap-2"><input class="form-control w-auto" name="q" value="{{ request.GET.q }}" placeholder="Rechercher une tâche" aria-label="Rechercher une tâche"><select class="form-select w-auto" name="statut" aria-label="Statut"><option value="">Tous les statuts</option>{% for value,label in statuts %}<option value="{{ value }}" {% if request.GET.statut == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-soft">Filtrer</button></form>
+{% if can_manage_objectifs and perms.objectifs.add_tacheapprentissage %}<a class="btn btn-primary" href="{% url 'objectifs:tache_create' %}">Ajouter une tâche</a>{% endif %}</div>
+<div class="card-x table-responsive"><table class="table table-x"><thead><tr><th>Tâche</th><th>Objectif</th><th>Statut</th><th>Échéance</th></tr></thead><tbody>{% for tache in object_list %}<tr><td><a href="{{ tache.get_absolute_url }}">{{ tache.titre }}</a></td><td><a href="{{ tache.objectif.get_absolute_url }}">{{ tache.objectif }}</a></td><td>{{ tache.get_statut_display }}</td><td>{{ tache.date_echeance|date:"d/m/Y"|default:"Non définie" }}</td></tr>{% empty %}<tr><td colspan="4">Aucune tâche. Créez un objectif, puis ajoutez ses tâches.</td></tr>{% endfor %}</tbody></table></div>
+{% include "components/pagination.html" %}
+{% endblock %}
