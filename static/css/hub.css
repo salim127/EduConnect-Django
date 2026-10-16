@@ -170,3 +170,20 @@ body.sidebar-collapsed .nav-link-x { justify-content: center; }
   .cal td { height: 56px; padding: .25rem; font-size: .7rem; } .cal .ev { display: none; } .cal { border-spacing: 3px; }
   .modal-dialog { margin: 1rem; }
 }
+
+
+/* Connexion : champs alignés et confortables sur toutes les tailles d’écran. */
+.auth-card .field .form-label { display: block; }
+.auth-card .field .form-control {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+}
+.auth-card .field { margin-bottom: 1.25rem; }
+@media (max-width: 480px) {
+  .auth-form { padding: 1rem; }
+}

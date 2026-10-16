@@ -11,12 +11,13 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 
 from config.mixins import QueryStringMixin
 
-from .forms import PasswordForm, ProfileForm, RegisterForm, RoleForm, UserCreateForm, UserUpdateForm
+from .forms import HubAuthenticationForm, PasswordForm, ProfileForm, RegisterForm, RoleForm, UserCreateForm, UserUpdateForm
 from .roles import SYSTEM_ROLES
 
 
 @method_decorator(login_not_required, name='dispatch')
 class HubLoginView(LoginView):
+    authentication_form = HubAuthenticationForm
     template_name = 'accounts/login.html'
     redirect_authenticated_user = True
 

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Mes objectifs d’apprentissage{% endblock %}
+{% block page_title %}Mes objectifs d’apprentissage{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between gap-3 mb-4"><form class="d-flex gap-2" method="get"><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Rechercher un objectif" aria-label="Rechercher un objectif"><button class="btn btn-soft">Rechercher</button></form>
+{% if can_manage_objectifs and perms.objectifs.add_objectifapprentissage %}<a class="btn btn-primary" href="{% url 'objectifs:objectif_create' %}">Ajouter un objectif</a>{% endif %}</div>
+<div class="row g-3">{% for objectif in object_list %}<div class="col-md-6 col-xl-4"><article class="card-x card-pad h-100">
+<span class="badge-soft badge-primary">Priorité {{ objectif.get_priorite_display|lower }}</span><h3 class="h5 mt-3"><a href="{{ objectif.get_absolute_url }}">{{ objectif.titre }}</a></h3>
+<p><span class="badge-soft badge-teal">{{ objectif.get_niveau_display }}</span></p><p class="small text-muted">Apprenant : {{ objectif.apprenant.get_full_name|default:objectif.apprenant.username|default:"À attribuer" }}</p><p class="text-muted">{{ objectif.description|truncatewords:25 }}</p><p>Échéance : {{ objectif.date_echeance|date:"d/m/Y"|default:"Non définie" }}</p>
+<p>{{ objectif.taches.count }} tâche(s) · {{ objectif.progression }} % validés</p><progress class="w-100" value="{{ objectif.progression }}" max="100" aria-label="Progression"></progress>
+</article></div>{% empty %}{% include "components/empty.html" with icon="bi-bullseye" title="Aucun objectif" text="Ajoutez votre premier objectif d’apprentissage." %}{% endfor %}</div>
+{% include "components/pagination.html" %}
+{% endblock %}

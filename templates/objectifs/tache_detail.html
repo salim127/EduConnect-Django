@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ object.titre }}{% endblock %}
+{% block page_title %}{{ object.titre }}{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
+{% block content %}
+
+<section class="card-x card-pad"><p>Objectif : <a href="{{ object.objectif.get_absolute_url }}">{{ object.objectif }}</a></p><p>{{ object.description|linebreaksbr }}</p><p>Durée estimée : {% if object.duree_estimee %}{{ object.duree_estimee }} minutes{% else %}Non définie{% endif %}</p><p>Statut : {{ object.get_statut_display }}</p><p>Échéance : {{ object.date_echeance|date:"d/m/Y"|default:"Non définie" }}</p>
+{% if can_manage_objectifs and perms.objectifs.change_tacheapprentissage %}<a class="btn btn-primary" href="{% url 'objectifs:tache_update' object.pk %}">Modifier</a>{% endif %}
+{% if can_manage_objectifs and perms.objectifs.delete_tacheapprentissage %}<a class="btn btn-outline-danger" href="{% url 'objectifs:tache_delete' object.pk %}">Supprimer</a>{% endif %}
+{% if can_validate %}<a class="btn btn-teal" href="{% url 'objectifs:tache_validation' object.pk %}">Valider ou demander une reprise</a>{% endif %}
+{% if object.statut == 'soumise' %}<p class="alert alert-info mt-3">Cette tâche attend la validation du professeur.</p>{% elif object.statut == 'validee' %}<p class="alert alert-success mt-3">Cette tâche est validée et compte dans la progression de l’objectif.</p>{% elif object.statut == 'a_reprendre' %}<p class="alert alert-warning mt-3">Le professeur demande une reprise. Retravaillez la tâche, puis soumettez-la à nouveau.</p>{% endif %}
+{% if can_submit_work %}<a class="btn btn-primary" href="{% url 'objectifs:tache_travail' object.pk %}">Rédiger mon travail</a>{% endif %}
+<section class="mt-4"><h2 class="h5">Travail de l’apprenant</h2>
+{% if object.reponse %}<pre class="p-3 rounded border bg-light" style="white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit">{{ object.reponse }}</pre>{% else %}<p class="text-muted">Aucune réponse enregistrée.</p>{% endif %}
+{% if object.date_soumission %}<p class="small text-muted">Dernière soumission : {{ object.date_soumission|date:"d/m/Y à H:i" }}</p>{% endif %}</section>
+<a class="btn btn-soft" href="{% url 'objectifs:tache_list' %}">Toutes les tâches</a></section>
+{% endblock %}

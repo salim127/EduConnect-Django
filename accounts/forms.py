@@ -1,13 +1,17 @@
 from django import forms
-from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group, Permission, User
 
 from config.forms import BootstrapFormMixin
 
 from .roles import LEARNER, SYSTEM_ROLES
 
-PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice')]
+PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice'), ('objectifs', 'objectifapprentissage'), ('objectifs', 'tacheapprentissage')]
 ACTIONS = {'add': 'Ajouter', 'change': 'Modifier', 'delete': 'Supprimer', 'view': 'Consulter'}
+
+
+class HubAuthenticationForm(BootstrapFormMixin, AuthenticationForm):
+    pass
 
 
 class RegisterForm(BootstrapFormMixin, UserCreationForm):
@@ -82,7 +86,7 @@ class RoleForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         perms = Permission.objects.filter(
-            content_type__app_label__in=['auth', 'pedagogie'],
+            content_type__app_label__in=['auth', 'pedagogie', 'objectifs'],
             content_type__model__in=[m for _, m in PERM_MODELS],
         ).select_related('content_type')
         self.fields['permissions'].queryset = perms

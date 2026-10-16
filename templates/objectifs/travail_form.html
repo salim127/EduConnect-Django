@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Rédiger mon travail{% endblock %}
+{% block page_title %}{{ object.titre }}{% endblock %}
+{% block content %}
+<div class="card-x card-pad mb-3"><h2 class="h5">Consigne</h2><p>{{ object.description|linebreaksbr }}</p><p><strong>Critère de réussite :</strong> {{ object.objectif.critere_reussite|default:"À préciser" }}</p></div>
+<form method="post" class="card-x card-pad" novalidate>{% csrf_token %}
+{{ form.non_field_errors }}
+{% for error in form.action.errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+{% include "components/field.html" with field=form.reponse %}
+<div class="d-flex flex-wrap gap-2">
+<button type="submit" name="action" value="brouillon" class="btn btn-soft">Enregistrer le brouillon</button>
+<button type="submit" name="action" value="soumettre" class="btn btn-primary">Soumettre mon travail</button>
+<a href="{{ object.get_absolute_url }}" class="btn btn-soft">Annuler</a></div>
+</form>
+{% endblock %}

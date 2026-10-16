@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ object.titre }}{% endblock %}
+{% block page_title %}{{ object.titre }}{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
+{% block content %}
+
+<section class="card-x card-pad mb-4"><p><strong>Apprenant :</strong> {{ object.apprenant.get_full_name|default:object.apprenant.username|default:"À attribuer" }} · <strong>Créateur :</strong> {{ object.proprietaire.get_full_name|default:object.proprietaire.username }}</p><p>{{ object.description|linebreaksbr }}</p><p>Priorité : {{ object.get_priorite_display }} · Échéance : {{ object.date_echeance|date:"d/m/Y"|default:"Non définie" }}</p>
+<p><strong>Niveau :</strong> {{ object.get_niveau_display }}</p><p><strong>Critère de réussite :</strong> {{ object.critere_reussite|default:"À préciser"|linebreaksbr }}</p>
+<p>Progression (tâches validées) : {{ object.progression }} %</p><progress class="w-100" max="100" value="{{ object.progression }}" aria-label="Progression"></progress>
+<div class="d-flex flex-wrap gap-2 mt-3">
+{% if can_manage_objectifs and perms.objectifs.change_objectifapprentissage %}<a class="btn btn-soft" href="{% url 'objectifs:objectif_update' object.pk %}">Modifier</a>{% endif %}
+{% if can_manage_objectifs and perms.objectifs.delete_objectifapprentissage %}<a class="btn btn-outline-danger" href="{% url 'objectifs:objectif_delete' object.pk %}">Supprimer l’objectif</a>{% endif %}
+<a class="btn btn-soft" href="{% url 'objectifs:objectif_list' %}">Tous les objectifs</a></div></section>
+<div class="d-flex justify-content-between mb-3"><h2 class="h4">Tâches de cet objectif</h2>{% if can_manage_objectifs and perms.objectifs.add_tacheapprentissage %}<a class="btn btn-primary" href="{% url 'objectifs:tache_create' %}?objectif={{ object.pk }}">Ajouter une tâche</a>{% endif %}</div>
+{% for tache in object.taches.all %}<div class="card-x card-pad mb-2 d-flex justify-content-between"><a href="{{ tache.get_absolute_url }}">{{ tache.titre }}</a><span class="badge-soft badge-teal">{{ tache.get_statut_display }}</span></div>{% empty %}<p class="text-muted">Aucune tâche pour cet objectif.</p>{% endfor %}
+{% endblock %}

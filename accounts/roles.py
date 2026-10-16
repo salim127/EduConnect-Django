@@ -12,16 +12,16 @@ def is_admin(user):
 
 def _perms(models, actions):
     codes = [f'{a}_{m}' for m in models for a in actions]
-    return Permission.objects.filter(codename__in=codes, content_type__app_label__in=['auth', 'pedagogie'])
+    return Permission.objects.filter(codename__in=codes, content_type__app_label__in=['auth', 'pedagogie', 'objectifs'])
 
 
 def ensure_system_roles():
     """Crée les 3 rôles système (une seule fois) avec leurs permissions par défaut."""
     crud = ('add', 'change', 'delete', 'view')
     defaults = {
-        ADMIN: _perms(['user', 'group', 'cours', 'exercice'], crud),
-        TEACHER: _perms(['cours', 'exercice'], crud),
-        LEARNER: _perms(['cours', 'exercice'], ('view',)),
+        ADMIN: _perms(['user', 'group', 'cours', 'exercice', 'objectifapprentissage', 'tacheapprentissage'], crud),
+        TEACHER: _perms(['cours', 'exercice', 'objectifapprentissage', 'tacheapprentissage'], crud),
+        LEARNER: _perms(['cours', 'exercice'], ('view',)) | _perms(['objectifapprentissage', 'tacheapprentissage'], ('view',)) | Permission.objects.filter(content_type__app_label='objectifs', codename='update_statut_tacheapprentissage'),
     }
     for name, perms in defaults.items():
         group, created = Group.objects.get_or_create(name=name)

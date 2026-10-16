@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Confirmer la suppression{% endblock %}
+{% block page_title %}Confirmer la suppression{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
+{% block content %}
+
+<form method="post" class="card-x card-pad">{% csrf_token %}
+<p>Supprimer « {{ object }} » ?</p>
+{% if is_objectif %}<p class="text-danger">Les {{ object.taches.count }} tâche(s) de cet objectif seront également supprimées.</p>{% endif %}
+<button class="btn btn-danger">Confirmer la suppression</button> <a class="btn btn-soft" href="{{ object.get_absolute_url }}">Annuler</a>
+</form>
+{% endblock %}
