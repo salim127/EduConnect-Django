@@ -2,7 +2,7 @@
 {% block title %}Mes objectifs d’apprentissage{% endblock %}
 {% block page_title %}Mes objectifs d’apprentissage{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
-{% block content %}
+{% block content %}<div class="d-flex flex-wrap gap-2 mb-3"><a class="btn btn-soft" href="{% url 'objectifs:recherche_sens' %}">Recherche par sens</a><a class="btn btn-soft" href="{% url 'objectifs:charge' %}">Charge de travail</a>{% if can_manage_objectifs %}<a class="btn btn-soft" href="{% url 'objectifs:besoins' %}">Besoins des apprenants</a>{% endif %}</div>
 
 <div class="d-flex justify-content-between gap-3 mb-4"><form class="d-flex gap-2" method="get"><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Rechercher un objectif" aria-label="Rechercher un objectif"><button class="btn btn-soft">Rechercher</button></form>
 {% if can_manage_objectifs and perms.objectifs.add_objectifapprentissage %}<a class="btn btn-primary" href="{% url 'objectifs:objectif_create' %}">Ajouter un objectif</a>{% endif %}</div>

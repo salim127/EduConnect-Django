@@ -25,7 +25,7 @@ class AssignmentTests(TestCase):
         self.client.force_login(user)
 
     def goal_data(self, **kwargs):
-        return dict(titre='Python', description='Bases', priorite='haute', niveau='debutant', critere_reussite='Réussir 8 questions sur 10', date_echeance='2027-06-01', apprenant=self.eleve.pk, **kwargs)
+        return dict(titre='Python', description='Bases', priorite='haute', niveau='debutant', decision='en_cours', critere_reussite='Réussir 8 questions sur 10', date_echeance='2027-06-01', apprenant=self.eleve.pk, **kwargs)
 
     def test_teacher_crud_and_assignment(self):
         self.login(self.prof)
@@ -290,3 +290,290 @@ class AssignmentTests(TestCase):
         for user in [self.prof, self.eleve2]:
             self.login(user)
             self.assertEqual(self.client.post(self.url('tache_travail', self.task.pk), {'action': 'soumettre', 'reponse': 'Interdit'}).status_code, 403 if user == self.prof else 404)
+
+
+    def test_statistics_roles_and_totals(self):
+        from .models import TempsActivite
+        from django.utils import timezone
+        TempsActivite.objects.create(utilisateur=self.eleve, tache=self.task, jour=timezone.localdate(), secondes=120)
+        for user in [self.prof, self.eleve, self.admin]:
+            self.login(user)
+            page = self.client.get(self.url('statistiques'))
+            self.assertEqual(page.status_code, 200)
+            self.assertEqual(page.context['total_minutes'], 2.0)
+            self.assertEqual(page.context['total_taches'], 1)
+            self.assertEqual(len(page.context['jours']), 7)
+        self.login(self.eleve2)
+        page = self.client.get(self.url('statistiques'))
+        self.assertEqual(page.context['total_minutes'], 0)
+        self.assertNotContains(page, self.goal.titre)
+        self.assertEqual(self.client.post(self.url('statistiques'), {'objectif': self.goal.pk}).status_code, 404)
+
+    def test_activity_counts_server_time_and_ignores_client_duration(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import HorlogeActivite, TempsActivite
+        self.login(self.eleve)
+        url = self.url('activite', self.task.pk)
+        first = self.client.post(url, {'active': 'true', 'secondes': 99999})
+        self.assertEqual(first.json()['secondes_ajoutees'], 0)
+        HorlogeActivite.objects.filter(utilisateur=self.eleve).update(dernier_signal=timezone.now()-timedelta(seconds=10))
+        self.assertEqual(self.client.post(url, {'active': 'true', 'secondes': 99999}).json()['secondes_ajoutees'], 10)
+        self.assertEqual(TempsActivite.objects.get().secondes, 10)
+        self.assertEqual(self.client.post(url, {'active': 'true'}).json()['secondes_ajoutees'], 0)
+        HorlogeActivite.objects.filter(utilisateur=self.eleve).update(dernier_signal=timezone.now()-timedelta(seconds=120))
+        self.assertEqual(self.client.post(url, {'active': 'true'}).json()['secondes_ajoutees'], 0)
+
+    def test_activity_pause_and_permissions(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import HorlogeActivite
+        self.login(self.eleve)
+        url = self.url('activite', self.task.pk)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertEqual(self.client.post(url, {'active': 'invalid'}).status_code, 400)
+        self.client.post(url, {'active': 'false'})
+        HorlogeActivite.objects.filter(utilisateur=self.eleve).update(dernier_signal=timezone.now()-timedelta(seconds=10))
+        self.assertEqual(self.client.post(url, {'active': 'true'}).json()['secondes_ajoutees'], 0)
+        self.login(self.eleve2)
+        self.assertEqual(self.client.post(url, {'active': 'true'}).status_code, 404)
+        self.login(self.prof)
+        self.assertEqual(self.client.post(url, {'active': 'true'}).status_code, 403)
+        self.login(self.eleve)
+        self.task.statut = 'soumise'
+        self.task.save()
+        self.assertEqual(self.client.post(url, {'active': 'true'}).status_code, 404)
+
+    def test_multiple_tasks_share_one_clock(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import HorlogeActivite, TempsActivite
+        other = TacheApprentissage.objects.create(titre='Autre tâche', objectif=self.goal)
+        self.login(self.eleve)
+        self.client.post(self.url('activite', self.task.pk), {'active': 'true'})
+        HorlogeActivite.objects.filter(utilisateur=self.eleve).update(dernier_signal=timezone.now()-timedelta(seconds=10))
+        self.assertEqual(self.client.post(self.url('activite', other.pk), {'active': 'true'}).json()['secondes_ajoutees'], 0)
+        self.assertEqual(HorlogeActivite.objects.filter(utilisateur=self.eleve).count(), 1)
+        self.assertFalse(TempsActivite.objects.exists())
+
+    def test_gemini_missing_key_and_mock_analysis(self):
+        from django.test import override_settings
+        from unittest.mock import patch
+        self.login(self.prof)
+        with override_settings(GEMINI_API_KEY=''):
+            page = self.client.post(self.url('statistiques'), {'objectif': self.goal.pk})
+            self.assertContains(page, 'Gemini n’est pas configuré')
+        session = self.client.session
+        session.pop('derniere_analyse', None)
+        session.save()
+        with override_settings(GEMINI_API_KEY='test-only'), patch('objectifs.statistiques.analyse_gemini', return_value='<script>test</script> Objectif partiellement atteint'):
+            page = self.client.post(self.url('statistiques'), {'objectif': self.goal.pk})
+            self.assertContains(page, '&lt;script&gt;test&lt;/script&gt;')
+            self.assertNotContains(page, '<script>test</script>')
+            self.goal.refresh_from_db()
+            self.assertEqual(self.goal.decision, 'en_cours')
+            self.task.refresh_from_db()
+            self.assertEqual(self.task.statut, 'a_faire')
+            self.assertContains(self.client.post(self.url('statistiques'), {'objectif': self.goal.pk}), 'Attendez 30 secondes')
+
+    def test_gemini_transport_uses_header_and_no_user_names(self):
+        import io
+        import json
+        from unittest.mock import patch
+        from django.test import override_settings
+        from .statistiques import analyse_gemini
+        payload = {'candidates': [{'content': {'parts': [{'text': 'Données insuffisantes.'}]}}]}
+        with override_settings(GEMINI_API_KEY='secret-test', GEMINI_MODEL='gemini-2.5-flash'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as mocked:
+            self.assertEqual(analyse_gemini(self.goal, 60), 'Données insuffisantes.')
+            req = mocked.call_args.args[0]
+            self.assertNotIn('secret-test', req.full_url)
+            self.assertEqual(req.get_header('X-goog-api-key'), 'secret-test')
+            self.assertNotIn('username', req.data.decode())
+
+    def test_statistics_csrf_and_goal_decision(self):
+        from django.test import Client
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(self.eleve)
+        self.assertEqual(strict.post(self.url('activite', self.task.pk), {'active': 'true'}).status_code, 403)
+        self.login(self.prof)
+        data = self.goal_data()
+        data['decision'] = 'atteint'
+        self.assertEqual(self.client.post(self.url('objectif_update', self.goal.pk), data).status_code, 302)
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.decision, 'atteint')
+        self.assertEqual(self.goal.progression, 0)
+
+
+    def test_intelligence_pages_and_role_access(self):
+        for user in [self.prof, self.eleve, self.admin]:
+            self.login(user)
+            for route in ['charge', 'recherche_sens']:
+                self.assertEqual(self.client.get(self.url(route)).status_code, 200)
+        self.login(self.eleve)
+        self.assertEqual(self.client.get(self.url('besoins')).status_code, 403)
+        self.assertEqual(self.client.post(self.url('besoins')).status_code, 403)
+        self.assertEqual(self.client.get(self.url('disponibilite')).status_code, 200)
+        self.login(self.prof)
+        self.assertEqual(self.client.get(self.url('disponibilite')).status_code, 403)
+        self.assertContains(self.client.get(self.url('besoins')), 'Données insuffisantes')
+        self.client.logout()
+        self.assertEqual(self.client.get(self.url('charge')).status_code, 302)
+
+    def test_availability_changes_only_current_user(self):
+        from .models import DisponibiliteApprenant
+        self.login(self.eleve)
+        self.assertEqual(self.client.post(self.url('disponibilite'), {'minutes_semaine': 180, 'utilisateur': self.eleve2.pk}).status_code, 302)
+        self.assertEqual(DisponibiliteApprenant.objects.get(utilisateur=self.eleve).minutes_semaine, 180)
+        self.assertFalse(DisponibiliteApprenant.objects.filter(utilisateur=self.eleve2).exists())
+        for value in [-1, 10081, 'abc']:
+            self.assertEqual(self.client.post(self.url('disponibilite'), {'minutes_semaine': value}).status_code, 200)
+        self.assertEqual(self.client.post(self.url('disponibilite'), {'minutes_semaine': 0}).status_code, 302)
+        self.assertEqual(self.client.post(self.url('disponibilite'), {'minutes_semaine': ''}).status_code, 302)
+        self.assertIsNone(DisponibiliteApprenant.objects.get(utilisateur=self.eleve).minutes_semaine)
+
+    def test_workload_capacity_cumulative_and_early_deadline(self):
+        from .models import DisponibiliteApprenant
+        from .intelligence import calcul_charges
+        today = date(2027, 5, 26)
+        self.task.duree_estimee = 100
+        self.task.save()
+        goals = [self.goal]
+        self.assertIn('non renseignée', calcul_charges(goals, today)[self.goal.pk]['motif'])
+        DisponibiliteApprenant.objects.create(utilisateur=self.eleve, minutes_semaine=120)
+        row = calcul_charges(goals, today)[self.goal.pk]
+        self.assertEqual(row['capacite'], 120)
+        self.assertFalse(row['alerte'])
+        other = ObjectifApprentissage.objects.create(titre='Autre objectif', proprietaire=self.prof, apprenant=self.eleve, date_echeance=self.goal.date_echeance)
+        TacheApprentissage.objects.create(titre='Autre tâche', objectif=other, duree_estimee=50)
+        row = calcul_charges([self.goal, other], today)[self.goal.pk]
+        self.assertEqual(row['cumul'], 150)
+        self.assertTrue(row['alerte'])
+        self.task.statut = 'validee'
+        self.task.save()
+        self.assertEqual(calcul_charges([self.goal], today)[self.goal.pk]['restant'], 0)
+        self.task.statut = 'a_faire'
+        self.task.date_echeance = today
+        self.task.save()
+        self.assertTrue(calcul_charges([self.goal], today)[self.goal.pk]['alerte'])
+
+    def test_workload_incomplete_past_and_no_deadline(self):
+        from .models import DisponibiliteApprenant
+        from .intelligence import calcul_charges
+        DisponibiliteApprenant.objects.create(utilisateur=self.eleve, minutes_semaine=0)
+        row = calcul_charges([self.goal], date(2027, 6, 2))[self.goal.pk]
+        self.assertIn('incompl', row['motif'])
+        self.task.duree_estimee = 20
+        self.task.save()
+        self.assertTrue(calcul_charges([self.goal], date(2027, 6, 2))[self.goal.pk]['alerte'])
+        self.goal.date_echeance = None
+        self.goal.save()
+        self.assertIn('Échéance', calcul_charges([self.goal])[self.goal.pk]['motif'])
+
+    def test_semantic_search_scope_json_validation_and_fallback(self):
+        import json
+        from unittest.mock import patch
+        from .intelligence import recherche_sens, recherche_locale
+        self.goal.titre = 'Maîtriser les boucles Python'
+        self.goal.save()
+        payload = {'resultats': [{'id': self.goal.pk, 'raison': 'Répétition avec for et while'}, {'id': 9999, 'raison': 'Interdit'}, {'id': self.goal.pk, 'raison': 'Doublon'}]}
+        with patch('objectifs.intelligence.appel_gemini', return_value=json.dumps(payload)) as api:
+            result = recherche_sens('répéter des instructions', [self.goal])
+            self.assertEqual([r['goal'].pk for r in result], [self.goal.pk])
+            self.assertNotIn('username', api.call_args.args[0])
+        self.assertEqual(recherche_locale('je veux apprendre à répéter des instructions', [self.goal])[0]['goal'], self.goal)
+        self.login(self.eleve)
+        with patch('objectifs.intelligence.appel_gemini', side_effect=ValueError('Quota atteint')):
+            page = self.client.post(self.url('recherche_sens'), {'q': 'répéter des instructions'})
+            self.assertContains(page, self.goal.titre)
+            self.assertContains(page, 'sans analyse IA')
+        self.login(self.eleve2)
+        with patch('objectifs.intelligence.appel_gemini') as api:
+            page = self.client.post(self.url('recherche_sens'), {'q': 'répéter'})
+            self.assertNotContains(page, self.goal.titre)
+            api.assert_not_called()
+
+    def test_semantic_get_does_not_call_ai_and_bad_json(self):
+        from unittest.mock import patch
+        from .intelligence import recherche_sens
+        self.login(self.eleve)
+        with patch('objectifs.intelligence.appel_gemini') as api:
+            self.client.get(self.url('recherche_sens'), {'q': 'boucles'})
+            api.assert_not_called()
+        for response in ['oops', '[]', '{"resultats":42}']:
+            with patch('objectifs.intelligence.appel_gemini', return_value=response):
+                with self.assertRaises(ValueError):
+                    recherche_sens('test', [self.goal])
+
+    def needs_records(self):
+        from .intelligence import donnees_besoins
+        other = ObjectifApprentissage.objects.create(titre='Python 2', proprietaire=self.prof, apprenant=self.eleve2)
+        task = TacheApprentissage.objects.create(titre='Boucles 2', objectif=other, statut='a_reprendre', reponse='while True: print(1)')
+        self.task.statut = 'a_reprendre'
+        self.task.reponse = 'while True: print(2)'
+        self.task.save()
+        return donnees_besoins([self.goal, other]), task
+
+    def test_grouping_evidence_checked_and_no_drafts(self):
+        import json
+        from unittest.mock import patch
+        from .intelligence import regrouper_besoins, donnees_besoins
+        self.assertEqual(donnees_besoins([self.goal]), [])
+        records, other_task = self.needs_records()
+        payload = {'groupes': [{'besoin': 'Condition d’arrêt', 'accompagnement': 'Exercice guidé', 'membres': [
+            {'apprenant': self.eleve.pk, 'preuves': [self.task.pk], 'raison': 'Pas de condition de sortie'},
+            {'apprenant': self.eleve2.pk, 'preuves': [other_task.pk], 'raison': 'Boucle infinie'},
+            {'apprenant': self.admin.pk, 'preuves': [other_task.pk], 'raison': 'Inventé'}]}]}
+        with patch('objectifs.intelligence.appel_gemini', return_value=json.dumps(payload)) as api:
+            groups = regrouper_besoins(records)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(len(groups[0]['membres']), 2)
+            self.assertNotIn('username', api.call_args.args[0])
+        payload['groupes'][0]['membres'][1]['preuves'] = [self.task.pk]
+        with patch('objectifs.intelligence.appel_gemini', return_value=json.dumps(payload)):
+            self.assertEqual(regrouper_besoins(records), [])
+
+    def test_grouping_views_no_hidden_students_and_insufficient_data(self):
+        from unittest.mock import patch
+        self.login(self.prof)
+        with patch('objectifs.intelligence.appel_gemini') as api:
+            self.assertContains(self.client.post(self.url('besoins')), 'Données insuffisantes')
+            api.assert_not_called()
+        records, other_task = self.needs_records()
+        with patch('objectifs.intelligence.appel_gemini', return_value='{"groupes": []}'):
+            self.assertContains(self.client.post(self.url('besoins')), 'Aucun besoin commun')
+        self.login(self.prof2)
+        page = self.client.get(self.url('besoins'))
+        self.assertEqual(page.context['nombre_apprenants'], 0)
+
+    def test_intelligence_csrf_invalid_form_and_escaped_ai(self):
+        import json
+        from unittest.mock import patch
+        from django.test import Client
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(self.prof)
+        self.assertEqual(strict.post(self.url('besoins')).status_code, 403)
+        self.login(self.eleve)
+        self.assertEqual(self.client.post(self.url('recherche_sens'), {'q': ' '}).status_code, 200)
+        payload = {'resultats': [{'id': self.goal.pk, 'raison': '<script>alert(1)</script>'}]}
+        with patch('objectifs.intelligence.appel_gemini', return_value=json.dumps(payload)):
+            page = self.client.post(self.url('recherche_sens'), {'q': 'python'})
+            self.assertContains(page, '&lt;script&gt;alert(1)&lt;/script&gt;')
+            self.assertNotContains(page, '<script>alert(1)</script>')
+
+
+    def test_gemini_json_mode_and_truncation_error(self):
+        import io
+        import json
+        from unittest.mock import patch
+        from django.test import override_settings
+        from .statistiques import appel_gemini
+        payload = {'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': '{"groupes": []}'}]}}]}
+        with override_settings(GEMINI_API_KEY='test', GEMINI_MODEL='gemini-2.5-flash'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as api:
+            self.assertEqual(appel_gemini('test', json_mode=True), '{"groupes": []}')
+            config = json.loads(api.call_args.args[0].data)['generationConfig']
+            self.assertEqual(config['responseMimeType'], 'application/json')
+            self.assertEqual(config['thinkingConfig']['thinkingBudget'], 0)
+        payload['candidates'][0]['finishReason'] = 'MAX_TOKENS'
+        with override_settings(GEMINI_API_KEY='test'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())):
+            with self.assertRaisesMessage(ValueError, 'interrompue'):
+                appel_gemini('test', json_mode=True)

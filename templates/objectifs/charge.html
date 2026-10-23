@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Charge de travail{% endblock %}
+{% block page_title %}Charge de travail{% endblock %}
+{% block content %}
+
+{% if is_learner %}<a class="btn btn-primary mb-3" href="{% url 'objectifs:disponibilite' %}">Renseigner ma disponibilité</a>{% endif %}
+<p class="text-muted">Calcul local, sans appel IA. La disponibilité est répartie uniformément sur sept jours, aujourd’hui inclus. Le cumul tient compte des tâches restantes des objectifs que vous pouvez consulter pour cet apprenant. Les autres cours et engagements ne sont pas inclus.</p>
+{% for row in rows %}<section class="card-x card-pad mb-3"><h2 class="h5"><a href="{{ row.goal.get_absolute_url }}">{{ row.goal }}</a></h2><p>Apprenant : {{ row.goal.apprenant|default:"À attribuer" }} · Échéance : {{ row.goal.date_echeance|date:"d/m/Y"|default:"Non définie" }}</p><p>Durée restante estimée : <strong>{{ row.charge.restant }} min</strong> · Disponibilité : {{ row.charge.hebdo|default_if_none:"Non renseignée" }} min/semaine</p><div class="alert {% if row.charge.alerte %}alert-warning{% else %}alert-info{% endif %}">{{ row.charge.motif }}</div></section>{% empty %}<p>Aucun objectif à afficher.</p>{% endfor %}
+<p class="small text-muted">Les tâches validées sont exclues ; les tâches soumises restent comptées jusqu’à validation. Le temps actif n’est pas soustrait : il ne garantit pas que le travail soit terminé.</p>
+{% endblock %}

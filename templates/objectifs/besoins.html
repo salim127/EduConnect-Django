@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Besoins des apprenants{% endblock %}
+{% block page_title %}Besoins des apprenants{% endblock %}
+{% block content %}
+
+<p>Repérez des besoins communs à partir des travaux rendus. Les propositions restent à vérifier par le professeur et ne changent aucune attribution.</p>
+<p>{{ nombre_apprenants }} apprenant(s) dans l’échantillon · {{ nombre_travaux }} travail(aux) disponible(s).</p>
+{% if limite %}<p class="alert alert-info">L’analyse est limitée aux 40 premiers travaux accessibles ; les réponses sont tronquées à 2 000 caractères.</p>{% endif %}
+<form method="post" class="card-x card-pad mb-3">{% csrf_token %}<p class="small text-muted">L’analyse transmet à Gemini les consignes, critères et réponses de l’échantillon avec des identifiants locaux, sans ajouter les noms des apprenants. Les brouillons sont exclus.</p><button class="btn btn-primary" {% if nombre_apprenants < 2 %}disabled{% endif %}>Identifier les besoins communs</button></form>
+{% if nombre_apprenants < 2 %}<p class="alert alert-info">Données insuffisantes : au moins deux apprenants distincts doivent avoir rendu une réponse.</p>{% endif %}
+{% if erreur %}<div class="alert alert-warning">{{ erreur }}</div>{% endif %}
+{% for group in groupes %}<section class="card-x card-pad mb-3"><h2 class="h5">{{ group.besoin }}</h2><p>{{ group.accompagnement }}</p>{% for member in group.membres %}<div class="border-top pt-2 mb-2"><strong>{{ member.user.get_full_name|default:member.user.username }}</strong><p>{{ member.raison }}</p>{% for task in member.preuves %}<a class="btn btn-soft" href="{{ task.get_absolute_url }}">Voir : {{ task }}</a>{% endfor %}</div>{% endfor %}</section>{% empty %}{% if analyse_effectuee %}<p>Aucun besoin commun suffisamment étayé n’a été identifié.</p>{% endif %}{% endfor %}
+{% endblock %}

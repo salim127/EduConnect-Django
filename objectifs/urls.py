@@ -1,8 +1,16 @@
 from django.urls import path
 from . import views
+from .intelligence_views import DisponibiliteView, ChargeView, RechercheSensView, BesoinsView
+from .statistiques import StatistiquesView, ActiviteView
 
 app_name = 'objectifs'
 urlpatterns = [
+    path('disponibilite/', DisponibiliteView.as_view(), name='disponibilite'),
+    path('charge/', ChargeView.as_view(), name='charge'),
+    path('recherche-intelligente/', RechercheSensView.as_view(), name='recherche_sens'),
+    path('besoins/', BesoinsView.as_view(), name='besoins'),
+    path('statistiques/', StatistiquesView.as_view(), name='statistiques'),
+    path('taches/<int:pk>/activite/', ActiviteView.as_view(), name='activite'),
     path('taches/<int:pk>/travail/', views.TacheTravailView.as_view(), name='tache_travail'),
     path('taches/<int:pk>/validation/', views.TacheValidationView.as_view(), name='tache_validation'),
     path('taches/<int:pk>/avancement/', views.TacheTravailView.as_view(), name='tache_statut'),

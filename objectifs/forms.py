@@ -9,7 +9,7 @@ from .models import ObjectifApprentissage, TacheApprentissage
 class ObjectifForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = ObjectifApprentissage
-        fields = ['titre', 'description', 'apprenant', 'niveau', 'critere_reussite', 'priorite', 'date_echeance']
+        fields = ['titre', 'description', 'apprenant', 'niveau', 'critere_reussite', 'decision', 'priorite', 'date_echeance']
         widgets = {'description': forms.Textarea(attrs={'rows': 4}), 'date_echeance': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
 
     def __init__(self, *args, **kwargs):

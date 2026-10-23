@@ -1,8 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Rédiger mon travail{% endblock %}
 {% block page_title %}{{ object.titre }}{% endblock %}
 {% block content %}
 <div class="card-x card-pad mb-3"><h2 class="h5">Consigne</h2><p>{{ object.description|linebreaksbr }}</p><p><strong>Critère de réussite :</strong> {{ object.objectif.critere_reussite|default:"À préciser" }}</p></div>
+<p id="temps-actif" class="small text-muted" data-url="{% url 'objectifs:activite' object.pk %}">Suivi du temps actif : démarrage…</p>
 <form method="post" class="card-x card-pad" novalidate>{% csrf_token %}
 {{ form.non_field_errors }}
 {% for error in form.action.errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
@@ -13,3 +15,5 @@
 <a href="{{ object.get_absolute_url }}" class="btn btn-soft">Annuler</a></div>
 </form>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/activite.js' %}"></script>{% endblock %}

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
 
 
@@ -12,6 +12,7 @@ class ObjectifApprentissage(models.Model):
     apprenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='objectifs_attribues', null=True, blank=True, verbose_name='Apprenant')
     date_creation = models.DateTimeField(auto_now_add=True)
     date_echeance = models.DateField('Échéance', null=True, blank=True)
+    decision = models.CharField('Décision du professeur', max_length=15, choices=[('en_cours', 'En cours'), ('atteint', 'Atteint'), ('a_renforcer', 'À renforcer')], default='en_cours')
     niveau = models.CharField(max_length=15, choices=[('debutant', 'Débutant'), ('intermediaire', 'Intermédiaire'), ('avance', 'Avancé')], default='debutant')
     critere_reussite = models.TextField('Critère de réussite', blank=True, default='')
     priorite = models.CharField('Priorité', max_length=10, choices=[('basse', 'Basse'), ('normale', 'Normale'), ('haute', 'Haute')], default='normale')
@@ -60,3 +61,27 @@ class TacheApprentissage(models.Model):
     def clean(self):
         if self.objectif_id and self.date_echeance and self.objectif.date_echeance and self.date_echeance > self.objectif.date_echeance:
             raise ValidationError({'date_echeance': "La tâche doit se terminer au plus tard à l’échéance de l’objectif."})
+
+
+
+class TempsActivite(models.Model):
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    tache = models.ForeignKey(TacheApprentissage, on_delete=models.CASCADE, related_name='temps_activite')
+    jour = models.DateField()
+    secondes = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['utilisateur', 'tache', 'jour'], name='unique_temps_tache_jour')]
+
+
+class HorlogeActivite(models.Model):
+    utilisateur = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    tache = models.ForeignKey(TacheApprentissage, on_delete=models.SET_NULL, null=True)
+    dernier_signal = models.DateTimeField()
+    active = models.BooleanField(default=False)
+
+
+
+class DisponibiliteApprenant(models.Model):
+    utilisateur = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='disponibilite_apprentissage')
+    minutes_semaine = models.PositiveIntegerField('Minutes disponibles par semaine', null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10080)])

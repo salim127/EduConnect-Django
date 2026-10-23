@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Ma disponibilité{% endblock %}
+{% block page_title %}Ma disponibilité{% endblock %}
+{% block content %}
+
+<form class="card-x card-pad" method="post" novalidate>{% csrf_token %}{{ form.non_field_errors }}{% include "components/field.html" with field=form.minutes_semaine %}<button class="btn btn-primary">Enregistrer</button></form>
+<p class="text-muted mt-3">Votre disponibilité sert à estimer la charge de travail. Elle n’est pas déduite de votre présence sur le site.</p>
+{% endblock %}

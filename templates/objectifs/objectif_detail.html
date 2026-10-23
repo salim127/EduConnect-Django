@@ -3,10 +3,11 @@
 {% block page_title %}{{ object.titre }}{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item">Gestion des objectifs</li>{% endblock %}
 {% block content %}
+<div class="alert {% if charge.alerte %}alert-warning{% else %}alert-info{% endif %}"><strong>Charge de travail :</strong> {{ charge.restant }} min estimées restantes. {{ charge.motif }} <a href="{% url 'objectifs:charge' %}">Voir le détail</a></div>
 
 <section class="card-x card-pad mb-4"><p><strong>Apprenant :</strong> {{ object.apprenant.get_full_name|default:object.apprenant.username|default:"À attribuer" }} · <strong>Créateur :</strong> {{ object.proprietaire.get_full_name|default:object.proprietaire.username }}</p><p>{{ object.description|linebreaksbr }}</p><p>Priorité : {{ object.get_priorite_display }} · Échéance : {{ object.date_echeance|date:"d/m/Y"|default:"Non définie" }}</p>
 <p><strong>Niveau :</strong> {{ object.get_niveau_display }}</p><p><strong>Critère de réussite :</strong> {{ object.critere_reussite|default:"À préciser"|linebreaksbr }}</p>
-<p>Progression (tâches validées) : {{ object.progression }} %</p><progress class="w-100" max="100" value="{{ object.progression }}" aria-label="Progression"></progress>
+<p><strong>Décision du professeur :</strong> {{ object.get_decision_display }}</p><p>Progression (tâches validées) : {{ object.progression }} %</p><progress class="w-100" max="100" value="{{ object.progression }}" aria-label="Progression"></progress>
 <div class="d-flex flex-wrap gap-2 mt-3">
 {% if can_manage_objectifs and perms.objectifs.change_objectifapprentissage %}<a class="btn btn-soft" href="{% url 'objectifs:objectif_update' object.pk %}">Modifier</a>{% endif %}
 {% if can_manage_objectifs and perms.objectifs.delete_objectifapprentissage %}<a class="btn btn-outline-danger" href="{% url 'objectifs:objectif_delete' object.pk %}">Supprimer l’objectif</a>{% endif %}
