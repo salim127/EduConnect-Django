@@ -141,3 +141,16 @@ MESSAGE_TAGS = {_m.ERROR: 'danger'}
 
 import time
 ASSET_VERSION = int(time.time())  # change à chaque démarrage : évite les CSS/JS en cache
+
+
+# Configuration locale côté serveur : ne jamais exposer la clé dans les templates.
+import os
+_local_env = BASE_DIR / '.env'
+if _local_env.exists():
+    for _line in _local_env.read_text(encoding='utf-8').splitlines():
+        if _line.strip() and not _line.lstrip().startswith('#') and '=' in _line:
+            _key, _value = _line.split('=', 1)
+            if _key.strip() in ('GEMINI_API_KEY', 'GEMINI_MODEL'):
+                os.environ.setdefault(_key.strip(), _value.strip().strip('"').strip("'"))
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')

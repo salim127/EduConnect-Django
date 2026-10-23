@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Recherche par sens{% endblock %}
+{% block page_title %}Recherche par sens{% endblock %}
+{% block content %}
+
+<form class="card-x card-pad mb-3" method="post" novalidate>{% csrf_token %}{{ form.non_field_errors }}{% include "components/field.html" with field=form.q %}<p class="small text-muted">Gemini reçoit votre phrase et les titres, descriptions et critères des objectifs accessibles, sans les noms ni les travaux des apprenants.</p><button class="btn btn-primary">Rechercher par sens</button></form>
+{% if erreur %}<div class="alert alert-warning">{{ erreur }} Une recherche locale par concepts est proposée à la place.</div>{% endif %}
+{% if limite %}<p>Recherche limitée aux 100 objectifs accessibles les plus récents.</p>{% endif %}
+{% if recherche_effectuee %}<p class="text-muted">{{ moteur }}</p>{% for result in results %}<article class="card-x card-pad mb-2"><h2 class="h5"><a href="{{ result.goal.get_absolute_url }}">{{ result.goal }}</a></h2><p>{{ result.raison }}</p></article>{% empty %}<p>Aucun objectif correspondant dans votre périmètre.</p>{% endfor %}{% endif %}
+{% endblock %}

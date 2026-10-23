@@ -51,6 +51,13 @@ class ObjectifDetailView(OwnedMixin, DetailView):
     permission_required = 'objectifs.view_objectifapprentissage'
     template_name = 'objectifs/objectif_detail.html'
 
+    def get_context_data(self, **kwargs):
+        from .statistiques import objectifs_visibles
+        from .intelligence import calcul_charges
+        ctx = super().get_context_data(**kwargs)
+        ctx['charge'] = calcul_charges(objectifs_visibles(self.request.user))[self.object.pk]
+        return ctx
+
 
 class SaveMixin:
     template_name = 'objectifs/form.html'
