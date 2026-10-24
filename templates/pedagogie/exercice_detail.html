@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load pedagogie_tags %}
+{% load static %}
 {% block title %}{{ object.titre }}{% endblock %}
 {% block page_title %}Détail de l'exercice{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item"><a href="{% url 'pedagogie:exercice_list' %}">Exercices</a></li><li class="breadcrumb-item active">{{ object.titre|truncatechars:30 }}</li>{% endblock %}
@@ -13,43 +14,49 @@
         <span class="badge badge-soft {% if object.difficulte == 'facile' %}badge-teal{% elif object.difficulte == 'moyen' %}badge-amber{% else %}badge-danger{% endif %}">{{ object.get_difficulte_display }}</span>
       </div>
       <h3>{{ object.titre }}</h3>
-      <h6 class="text-muted text-uppercase small mt-4">Question</h6>
-      <p class="fs-5" style="white-space: pre-line">{{ object.question }}</p>
-
-      <form method="post" class="mt-4">{% csrf_token %}
-        <h6 class="text-muted text-uppercase small">Votre réponse</h6>
-        {% if object.type_exercice == 'qcm' %}
-          <div class="list-group">
-          {% for p in object.liste_propositions %}
-            <label class="list-group-item d-flex align-items-center gap-3 {% if reponse_donnee and p|lower == object.bonne_reponse|lower %}list-group-item-success{% elif reponse_donnee and p == reponse_donnee %}list-group-item-danger{% endif %}" style="cursor:pointer">
-              <input class="form-check-input mt-0" type="radio" name="reponse" value="{{ p }}" {% if p == reponse_donnee %}checked{% endif %} required>
-              <span class="badge badge-soft badge-gray">{{ forloop.counter }}</span>{{ p }}
-            </label>
+      {% if teacher_preview %}<div class="alert alert-info mt-3">Aperçu professeur : vos essais ne créent pas de note. Consultez les copies dans <a href="{% url 'pedagogie:gradebook' %}?cours={{ object.cours_id }}">Notes des étudiants</a>.</div>{% elif readonly %}<div class="alert alert-info mt-3">Tentative n° {{ tentative.numero }} enregistrée. {% if can_submit %}<a href="{{ object.get_absolute_url }}">Commencer la nouvelle tentative autorisée</a>.{% else %}Une nouvelle tentative nécessite l’autorisation du professeur.{% endif %}</div>{% elif derniere_tentative %}<div class="alert alert-success mt-3">Le professeur vous autorise une nouvelle tentative. La note précédente reste enregistrée jusqu’à la nouvelle correction.</div>{% else %}<p class="small text-muted mt-3">Une seule soumission autorisée. Vérifiez vos réponses avant de les enregistrer.</p>{% endif %}
+      {% if questions_qcm %}
+      <form method="post" class="mt-4" id="exercise-answer-form" data-help-url="{% url 'pedagogie:exercise_help' object.pk %}" data-revision="{{ exercise_revision }}" data-attempt="{{ tentative.pk }}">{% csrf_token %}
+        <input type="hidden" name="exercise_revision" value="{{ exercise_revision }}">
+        <input type="hidden" name="attempt_number" value="{{ attempt_number }}">
+        {% for question in questions_qcm %}
+        <fieldset class="mb-4" data-exercise-question="{{ forloop.counter0 }}">
+          <legend class="fs-5">{{ forloop.counter }}. {{ question.question }}</legend>
+          {% with index=forloop.counter0 %}
+          {% if question_type == 'ouverte' %}
+          <textarea class="form-control" name="reponse_{{ index }}" rows="3" maxlength="5000" required {% if readonly %}disabled{% endif %}>{{ question.reponse }}</textarea>
+          {% else %}
+          {% for proposition in question.propositions %}
+          <label class="list-group-item d-flex gap-3">
+            <input type="radio" class="form-check-input" name="reponse_{{ index }}" value="{{ proposition }}" {% if proposition == question.reponse %}checked{% endif %} required {% if readonly %}disabled{% endif %}>
+            {{ proposition }}
+          </label>
           {% endfor %}
-          </div>
-        {% elif object.type_exercice == 'vf' %}
-          <div class="d-flex gap-2">
-            <label class="chip"><input class="form-check-input me-2" type="radio" name="reponse" value="Vrai" {% if reponse_donnee == 'Vrai' %}checked{% endif %} required>Vrai</label>
-            <label class="chip"><input class="form-check-input me-2" type="radio" name="reponse" value="Faux" {% if reponse_donnee == 'Faux' %}checked{% endif %} required>Faux</label>
-          </div>
-        {% else %}
-          <textarea class="form-control" name="reponse" rows="3" placeholder="Saisissez votre réponse…" required>{{ reponse_donnee }}</textarea>
-        {% endif %}
-        <button class="btn btn-primary mt-3"><i class="bi bi-check2-circle me-1"></i>Vérifier ma réponse</button>
+          {% endif %}
+          {% endwith %}
+          {% if question_type == 'ouverte' and question.bareme %}<details class="small mt-2"><summary>Barème du professeur</summary><p class="mt-2">{{ question.bareme|linebreaksbr }}</p></details>{% endif %}
+          {% if corrige %}
+            {% if question_type == 'ouverte' %}
+            <p class="small text-muted mt-2">La correction IA est indicative. La note définitive est validée par le professeur.</p>
+            {% if question.bareme and correction_available %}<button type="button" class="btn btn-soft btn-sm" data-exercise-help="correct">{% if question.correction %}Afficher ma correction IA{% else %}Proposer une correction IA{% endif %}</button>{% endif %}
+            <div data-open-correction class="mt-2" aria-live="polite">{% if question.correction %}{% include 'pedagogie/open_feedback.html' with correction=question.correction %}{% endif %}</div>
+            <details class="small mt-3"><summary>Voir le modèle de réponse</summary><p class="mt-2">{{ question.bonne_reponse|linebreaksbr }}</p></details>
+            {% else %}
+            <div class="alert {% if question.juste %}alert-success{% else %}alert-danger{% endif %} mt-2">
+              {% if question.juste %}Bonne réponse !{% else %}Réponse attendue : {{ question.bonne_reponse }}{% endif %}
+            </div>
+            {% endif %}
+          {% elif object|can_edit:user %}
+            <p class="small text-muted mt-2">Bonne réponse : {{ question.bonne_reponse }}</p>
+          {% endif %}
+          {% if question.explication %}{% if corrige or object|can_edit:user %}<div class="small mt-2 p-3 rounded" style="background:#f5f3fc"><strong>Explication :</strong> {{ question.explication|linebreaksbr }}</div>{% endif %}{% endif %}
+          <p data-help-status class="small text-muted mt-2 mb-0" role="status"></p><p data-help-error class="small text-danger mt-2 mb-0" role="alert"></p>
+        </fieldset>
+        {% endfor %}
+        {% if can_submit and not readonly %}<button class="btn btn-primary">Soumettre et enregistrer mes réponses</button>{% endif %}
       </form>
-
-      {% if erreur_reponse %}<div class="alert alert-warning mt-3 mb-0">{{ erreur_reponse }}</div>{% endif %}
-      {% if reponse_donnee %}
-        {% if resultat_juste %}
-          <div class="alert alert-success mt-3 mb-0"><i class="bi bi-check-circle-fill me-2"></i><strong>Bonne réponse !</strong> Bravo.</div>
-        {% else %}
-          <div class="alert alert-danger mt-3 mb-0"><i class="bi bi-x-circle-fill me-2"></i><strong>Ce n'est pas la bonne réponse.</strong> La réponse attendue est : <strong>{{ object.bonne_reponse }}</strong></div>
-        {% endif %}
-        <p class="small text-muted mt-2 mb-0">Vérification instantanée : le résultat n'est pas enregistré.</p>
-      {% endif %}
-
-      {% if object|can_edit:user %}
-      <div class="alert mt-4 mb-0" style="background:var(--teal-50);color:#006b62"><i class="bi bi-check-circle me-2"></i><strong>Bonne réponse :</strong> {{ object.bonne_reponse }}</div>
+      {% if erreur_reponse %}<div class="alert alert-warning mt-3">{{ erreur_reponse }}</div>{% endif %}
+      {% if corrige %}<div class="alert alert-info mt-3">{% if tentative.note != None %}<strong>Note enregistrée : {{ tentative.note }} / 20.</strong>{% else %}Réponses enregistrées. Note en attente de validation par le professeur.{% endif %}</div><a href="{% url 'pedagogie:attempt_result' tentative.pk %}">Voir ma copie et ma note</a>{% elif derniere_tentative %}<a class="d-inline-block mt-3" href="?tentative={{ derniere_tentative.pk }}">Revoir ma dernière tentative</a>{% endif %}
       {% endif %}
     </div>
   </div>
@@ -57,7 +64,10 @@
     <div class="card-x card-pad mb-3">
       <h6 class="text-muted text-uppercase small">Cours associé</h6>
       <a href="{{ object.cours.get_absolute_url }}" class="fw-semibold">{{ object.cours.titre }}</a>
+      {% if object.chapitre_id %}<a class="d-block small mt-2" href="{{ object.cours.get_absolute_url }}?chapitre={{ object.chapitre_id }}">Chapitre : {{ object.chapitre_titre }}</a>{% endif %}
       <div class="small text-muted">{{ object.cours.matiere }} · {{ object.cours.get_niveau_display }}</div>
+      {% if teacher_preview %}<a class="btn btn-soft btn-sm mt-3" href="{% url 'pedagogie:gradebook' %}?cours={{ object.cours_id }}">Notes des étudiants</a>{% else %}<a class="btn btn-soft btn-sm mt-3" href="{% url 'pedagogie:my_grades' %}">Mes notes et moyennes</a>{% endif %}
+      {% if object.chapitre_id %}<a class="btn btn-soft btn-sm mt-3" href="{% url 'pedagogie:chapter_practice' object.cours_id object.chapitre_id %}">Mon entraînement adapté</a>{% endif %}
     </div>
     <div class="card-x card-pad d-grid gap-2">
       {% if object|can_edit:user %}<a href="{% url 'pedagogie:exercice_update' object.pk %}" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Modifier</a>{% endif %}
@@ -67,3 +77,4 @@
   </div>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/exercise-help.js' %}?v={{ ASSET_V }}"></script>{% endblock %}

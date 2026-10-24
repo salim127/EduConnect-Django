@@ -1,0 +1,10 @@
+<div class="border rounded p-3 mb-3" data-question-row>
+  {{ question_form.non_field_errors }}
+  {% include "components/field.html" with field=question_form.question %}
+  {% include "components/field.html" with field=question_form.propositions %}
+  {% include "components/field.html" with field=question_form.bonne_reponse %}
+  {% include "components/field.html" with field=question_form.explication %}
+  {% include "components/field.html" with field=question_form.bareme %}
+  <span hidden>{{ question_form.DELETE }}</span>
+  <button type="button" class="btn btn-outline-danger btn-sm" data-remove-question>Retirer cette question</button>
+</div>

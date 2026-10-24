@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Notes des étudiants{% endblock %}
+{% block page_title %}Notes des étudiants{% endblock %}
+{% block content %}
+<section class="card-x card-pad mb-4"><h3>Suivi des résultats</h3>{% include 'pedagogie/grade_policy.html' %}
+  <form method="get" class="row g-3 align-items-end"><div class="col-md-5"><label class="form-label" for="grade-course">Cours</label><select class="form-select" name="cours" id="grade-course"><option value="">Tous mes cours</option>{% for course in courses %}<option value="{{ course.pk }}" {% if selected_course == course.pk|stringformat:'s' %}selected{% endif %}>{{ course.titre }}</option>{% endfor %}</select></div><div class="col-md-5"><label class="form-label" for="grade-student">Étudiant</label><select class="form-select" name="eleve" id="grade-student"><option value="">Tous les étudiants ayant remis une copie</option>{% for student in students %}<option value="{{ student.pk }}" {% if selected_student == student.pk|stringformat:'s' %}selected{% endif %}>{{ student.get_full_name|default:student.username }}</option>{% endfor %}</select></div><div class="col-md-2"><button class="btn btn-primary">Filtrer</button></div></form>
+</section>
+<section class="card-x card-pad mb-4"><h4>Moyennes par cours et par étudiant</h4><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Étudiant</th><th>Cours</th><th>Exercices notés</th><th>Copies en attente</th><th>Moyenne / 20</th></tr></thead><tbody>{% for item in summaries %}<tr><td>{{ item.eleve.get_full_name|default:item.eleve.username }}</td><td>{{ item.cours.titre }}</td><td>{{ item.graded }} / {{ item.submitted }} remis</td><td>{{ item.pending }}</td><td><strong>{% if item.average != None %}{{ item.average }}{% else %}En attente{% endif %}</strong></td></tr>{% empty %}<tr><td colspan="5" class="text-muted">Aucune copie remise pour cette sélection.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="card-x card-pad"><h4>Copies, notes et autorisations</h4>{% include 'pedagogie/grade_records.html' with teacher=True %}</section>
+{% endblock %}

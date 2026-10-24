@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
 from pedagogie.models import Cours, Exercice
+from pedagogie.visibility import visible_courses, visible_exercises
 
 
 @login_not_required
@@ -19,13 +20,14 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
-        ctx['nb_cours'] = Cours.objects.count()
-        ctx['nb_exercices'] = Exercice.objects.count()
+        courses, exercises = visible_courses(self.request.user), visible_exercises(self.request.user)
+        ctx['nb_cours'] = courses.count()
+        ctx['nb_exercices'] = exercises.count()
         ctx['nb_users'] = User.objects.count()
         ctx['nb_roles'] = Group.objects.count()
-        ctx['recent_cours'] = Cours.objects.select_related('enseignant')[:3]
+        ctx['recent_cours'] = courses.select_related('enseignant')[:3]
         # Données réelles pour le graphique
-        par_diff = dict(Exercice.objects.values_list('difficulte').annotate(n=Count('id')))
+        par_diff = dict(exercises.values_list('difficulte').annotate(n=Count('id')))
         ctx['chart_labels'] = [lbl for _, lbl in Exercice.DIFFICULTES]
         ctx['chart_data'] = [par_diff.get(k, 0) for k, _ in Exercice.DIFFICULTES]
         return ctx

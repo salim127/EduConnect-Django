@@ -123,6 +123,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -150,7 +151,8 @@ if _local_env.exists():
     for _line in _local_env.read_text(encoding='utf-8').splitlines():
         if _line.strip() and not _line.lstrip().startswith('#') and '=' in _line:
             _key, _value = _line.split('=', 1)
-            if _key.strip() in ('GEMINI_API_KEY', 'GEMINI_MODEL'):
+            if _key.strip() in ('GEMINI_API_KEY', 'GEMINI_MODEL', 'PEDAGOGIE_GEMINI_MODEL'):
                 os.environ.setdefault(_key.strip(), _value.strip().strip('"').strip("'"))
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+PEDAGOGIE_GEMINI_MODEL = os.environ.get('PEDAGOGIE_GEMINI_MODEL', 'gemini-3.1-flash-lite')
