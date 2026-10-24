@@ -26,4 +26,13 @@ def ensure_system_roles():
     for name, perms in defaults.items():
         group, created = Group.objects.get_or_create(name=name)
         if created:
-            group.permissions.set(perms)
+            group.permissions.add(*perms)
+        # Ajout ciblé et idempotent pour les bases existantes, sans remplacer
+        # les droits personnalisés ou les choix concernant les autres modules.
+        actions = ('view',) if name == LEARNER else crud
+        coaching = Permission.objects.filter(
+            content_type__app_label='coaching',
+            codename__in=[f'{action}_{model}' for action in actions
+                          for model in ('sessioncoaching', 'conseilpedagogique')],
+        )
+        group.permissions.add(*coaching)

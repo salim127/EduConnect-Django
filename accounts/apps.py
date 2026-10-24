@@ -6,7 +6,7 @@ def _create_roles(sender, **kwargs):
     from django.apps import apps
     from django.contrib.auth.management import create_permissions
 
-    for label in ('auth', 'pedagogie'):
+    for label in ('auth', 'pedagogie', 'objectifs', 'coaching'):
         create_permissions(apps.get_app_config(label), verbosity=0)
     from .roles import ensure_system_roles
     ensure_system_roles()

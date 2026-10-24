@@ -19,8 +19,10 @@
     <a class="nav-link-x {% if 'exercice' in v %}active{% endif %}" href="{% url 'pedagogie:exercice_list' %}"><i class="bi bi-pencil-square"></i><span class="label">Exercices</span></a>
 
     <div class="nav-section">Coaching</div>
-    <a class="nav-link-x {% if v == 'coaching:sessions' %}active{% endif %}" href="{% url 'coaching:sessions' %}"><i class="bi bi-calendar-event"></i><span class="label">Sessions de coaching</span><span class="tag" title="Démonstration"></span></a>
-    <a class="nav-link-x {% if v == 'coaching:conseils' %}active{% endif %}" href="{% url 'coaching:conseils' %}"><i class="bi bi-lightbulb"></i><span class="label">Conseils pédagogiques</span><span class="tag" title="Démonstration"></span></a>
+    <a class="nav-link-x {% if v == 'coaching:dashboard' %}active{% endif %}" href="{% url 'coaching:dashboard' %}"><i class="bi bi-speedometer2"></i><span class="label">Vue d’ensemble</span></a>
+    <a class="nav-link-x {% if v == 'coaching:sessions' %}active{% endif %}" href="{% url 'coaching:sessions' %}"><i class="bi bi-calendar3"></i><span class="label">Calendrier</span></a>
+    <a class="nav-link-x {% if 'coaching:session_' in v %}active{% endif %}" href="{% url 'coaching:session_list' %}"><i class="bi bi-calendar-event"></i><span class="label">Sessions de coaching</span></a>
+    <a class="nav-link-x {% if 'coaching:conseil_' in v %}active{% endif %}" href="{% url 'coaching:conseil_list' %}"><i class="bi bi-lightbulb"></i><span class="label">Conseils pédagogiques</span></a>
 
     <div class="nav-section">Ressources</div>
     <a class="nav-link-x {% if v == 'ressources:bibliotheque' %}active{% endif %}" href="{% url 'ressources:bibliotheque' %}"><i class="bi bi-collection-play"></i><span class="label">Bibliothèque</span><span class="tag" title="Démonstration"></span></a>

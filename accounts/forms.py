@@ -1,12 +1,13 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group, Permission, User
+from django.db.models import Q
 
 from config.forms import BootstrapFormMixin
 
 from .roles import LEARNER, SYSTEM_ROLES
 
-PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice'), ('objectifs', 'objectifapprentissage'), ('objectifs', 'tacheapprentissage')]
+PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice'), ('objectifs', 'objectifapprentissage'), ('objectifs', 'tacheapprentissage'), ('coaching', 'sessioncoaching'), ('coaching', 'conseilpedagogique')]
 ACTIONS = {'add': 'Ajouter', 'change': 'Modifier', 'delete': 'Supprimer', 'view': 'Consulter'}
 
 
@@ -85,10 +86,11 @@ class RoleForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        perms = Permission.objects.filter(
-            content_type__app_label__in=['auth', 'pedagogie', 'objectifs'],
-            content_type__model__in=[m for _, m in PERM_MODELS],
-        ).select_related('content_type')
+        displayed = Q(pk__in=[])
+        for app, model in PERM_MODELS:
+            displayed |= Q(content_type__app_label=app, content_type__model=model,
+                           codename__in=[f'{action}_{model}' for action in ACTIONS])
+        perms = Permission.objects.filter(displayed).select_related('content_type')
         self.fields['permissions'].queryset = perms
         if self.instance.pk and self.instance.name in SYSTEM_ROLES:
             self.fields['name'].disabled = True  # rôle système protégé
@@ -100,3 +102,11 @@ class RoleForm(BootstrapFormMixin, forms.ModelForm):
                                   for act, label in ACTIONS.items() if (model, act) in by_code])
             for _, model in PERM_MODELS
         ]
+
+    def _save_m2m(self):
+        # Ne modifier que les cases affichées ; conserver les permissions
+        # personnalisées (notamment la soumission des travaux Objectifs).
+        selected = self.cleaned_data['permissions']
+        displayed = self.fields['permissions'].queryset
+        self.instance.permissions.remove(*displayed.exclude(pk__in=selected))
+        self.instance.permissions.add(*selected)
