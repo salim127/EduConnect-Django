@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Mes notes{% endblock %}
+{% block page_title %}Mes notes et moyennes{% endblock %}
+{% block content %}
+<section class="card-x card-pad mb-4"><div class="d-flex align-items-center gap-3 mb-3"><h3 class="mb-0">Mes résultats</h3><span class="badge badge-soft badge-primary fs-6 ms-auto">Moyenne générale : {% if overall_average != None %}{{ overall_average }} / 20{% else %}En attente{% endif %}</span></div>{% include 'pedagogie/grade_policy.html' %}
+<p class="small text-muted">La moyenne générale applique aussi le même poids à chaque exercice noté.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Cours</th><th>Exercices notés</th><th>Copies en attente</th><th>Moyenne / 20</th></tr></thead><tbody>{% for item in summaries %}<tr><td>{{ item.cours.titre }}</td><td>{{ item.graded }} / {{ item.submitted }} remis</td><td>{{ item.pending }}</td><td><strong>{% if item.average != None %}{{ item.average }}{% else %}En attente{% endif %}</strong></td></tr>{% empty %}<tr><td colspan="4">Aucune note pour le moment. Soumettez un exercice pour enregistrer votre première tentative.</td></tr>{% endfor %}</tbody></table></div>
+</section><section class="card-x card-pad"><h4>Mes exercices et mes tentatives</h4>{% include 'pedagogie/grade_records.html' %}</section>
+{% endblock %}

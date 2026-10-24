@@ -1,0 +1,13 @@
+<section class="border rounded p-3 mb-3" data-chapter>
+  {{ chapitre_form.id }}
+  {% for error in chapitre_form.id.errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+  {{ chapitre_form.non_field_errors }}
+  {% include "components/field.html" with field=chapitre_form.titre %}
+  {% include "components/field.html" with field=chapitre_form.masque %}
+  {% include "components/field.html" with field=chapitre_form.contenu %}
+  {% include "components/field.html" with field=chapitre_form.fichiers %}
+  {% for support in chapitre_form.supports_existants %}{% include 'pedagogie/support_controls.html' %}{% endfor %}
+  {% if chapitre_form.supports_existants %}<p class="small text-muted">Les actions sur les documents seront appliquées en cliquant sur « Enregistrer ». La suppression est définitive.</p>{% endif %}
+  <span hidden>{{ chapitre_form.DELETE }}</span>
+  <button type="button" class="btn btn-outline-danger btn-sm" data-remove-chapter>Retirer ce chapitre</button>
+</section>

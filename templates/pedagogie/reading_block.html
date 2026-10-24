@@ -1,0 +1,6 @@
+{% if bloc.kind == 'heading' %}<h3 class="reading-heading">{{ bloc.html|safe }}</h3>
+{% elif bloc.kind == 'image' %}<figure class="reading-image"><img src="{{ bloc.src }}" alt="{{ bloc.alt }}" loading="lazy"></figure>
+{% elif bloc.kind == 'table' %}<div class="reading-table">{{ bloc.html|safe }}</div>
+{% elif bloc.kind == 'code' %}<pre class="reading-code">{{ bloc.text }}</pre>
+{% elif bloc.kind == 'bullet' %}<div class="reading-bullet"><span aria-hidden="true">•</span><div>{{ bloc.html|safe }}</div></div>
+{% else %}<div class="reading-paragraph">{{ bloc.html|safe }}</div>{% endif %}

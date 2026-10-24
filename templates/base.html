@@ -17,6 +17,7 @@
     <div class="nav-section">Pédagogie</div>
     <a class="nav-link-x {% if 'cours' in v %}active{% endif %}" href="{% url 'pedagogie:cours_list' %}"><i class="bi bi-journal-bookmark"></i><span class="label">Cours</span></a>
     <a class="nav-link-x {% if 'exercice' in v %}active{% endif %}" href="{% url 'pedagogie:exercice_list' %}"><i class="bi bi-pencil-square"></i><span class="label">Exercices</span></a>
+    {% if perms.pedagogie.change_exercice %}<a class="nav-link-x {% if v == 'pedagogie:gradebook' %}active{% endif %}" href="{% url 'pedagogie:gradebook' %}"><i class="bi bi-clipboard-data"></i><span class="label">Notes des étudiants</span></a>{% elif perms.pedagogie.view_exercice %}<a class="nav-link-x {% if v == 'pedagogie:my_grades' %}active{% endif %}" href="{% url 'pedagogie:my_grades' %}"><i class="bi bi-mortarboard"></i><span class="label">Mes notes</span></a>{% endif %}
 
     <div class="nav-section">Coaching</div>
     <a class="nav-link-x {% if v == 'coaching:sessions' %}active{% endif %}" href="{% url 'coaching:sessions' %}"><i class="bi bi-calendar-event"></i><span class="label">Sessions de coaching</span><span class="tag" title="Démonstration"></span></a>

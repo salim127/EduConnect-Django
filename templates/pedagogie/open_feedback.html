@@ -1,0 +1,8 @@
+<div class="border rounded p-3">
+  <h6>Correction proposée : {{ correction.score }} / {{ correction.maximum }}</h6><p class="small text-muted">Évaluation indicative à confirmer par le professeur.</p>
+  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Critère</th><th>Points</th><th>Commentaire</th></tr></thead><tbody>{% for item in correction.criteres %}<tr><td>{{ item.critere }}</td><td>{{ item.points }} / {{ item.maximum }}</td><td>{{ item.commentaire }}</td></tr>{% endfor %}</tbody></table></div>
+  {% if correction.corrects %}<strong>Points corrects</strong><ul>{% for item in correction.corrects %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% if correction.manquants %}<strong>Points à compléter</strong><ul>{% for item in correction.manquants %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  <p class="mb-0"><strong>Conseil :</strong> {{ correction.conseil }}</p>
+  {% if correction.truncated %}<p class="small text-muted mt-2 mb-0">Une partie des documents a été examinée, car le contenu est long.</p>{% endif %}
+</div>

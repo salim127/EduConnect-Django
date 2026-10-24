@@ -31,7 +31,7 @@
     {% for e in page_obj %}
       <tr>
         <td><a href="{{ e.get_absolute_url }}" class="fw-semibold text-reset">{{ e.titre }}</a><div class="small text-muted clamp-2" style="max-width:380px">{{ e.question }}</div></td>
-        <td><a href="{{ e.cours.get_absolute_url }}">{{ e.cours.titre }}</a></td>
+        <td><a href="{{ e.cours.get_absolute_url }}">{{ e.cours.titre }}</a>{% if e.chapitre_id %}<a class="d-block small text-muted" href="{{ e.cours.get_absolute_url }}?chapitre={{ e.chapitre_id }}">{{ e.chapitre_titre }}</a>{% else %}<span class="d-block small text-muted">Exercice général</span>{% endif %}</td>
         <td><span class="badge badge-soft badge-primary">{{ e.get_type_exercice_display }}</span></td>
         <td><span class="badge badge-soft {% if e.difficulte == 'facile' %}badge-teal{% elif e.difficulte == 'moyen' %}badge-amber{% else %}badge-danger{% endif %}">{{ e.get_difficulte_display }}</span></td>
         <td class="text-end text-nowrap">

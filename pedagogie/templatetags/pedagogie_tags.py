@@ -18,3 +18,10 @@ def can_edit(obj, user):
 @register.filter
 def can_delete(obj, user):
     return _allowed(obj, user, 'delete')
+
+
+@register.filter
+def course_content(value):
+    from django.utils.safestring import mark_safe
+    from pedagogie.richtext import clean_content
+    return mark_safe(clean_content(value))

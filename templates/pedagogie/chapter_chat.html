@@ -1,0 +1,13 @@
+<details class="card-x mt-4" id="chapter-assistant">
+  <summary class="card-pad" style="cursor:pointer"><strong><i class="bi bi-chat-dots me-2"></i>Assistant du chapitre</strong><span class="d-block small text-muted mt-1">Posez une question : l’assistant s’appuie sur ce chapitre et cite les passages utilisés.</span></summary>
+  <div class="px-4 pb-4">
+    <div id="chapter-chat-messages" class="border rounded p-3 mb-3" style="max-height:480px;overflow:auto" role="log" aria-live="polite"><p class="text-muted small mb-0" data-chat-welcome>Exemple : « Explique-moi les notions essentielles de ce chapitre avec un exemple. »</p></div>
+    <form id="chapter-chat-form" data-url="{% url 'pedagogie:chapter_assistant' object.pk chapitre_actif.id %}">{% csrf_token %}
+      <label for="chapter-chat-question" class="form-label">Votre question</label>
+      <textarea id="chapter-chat-question" name="question" class="form-control" rows="2" maxlength="1500" required placeholder="Que souhaitez-vous comprendre ?"></textarea>
+      <div class="d-flex flex-wrap gap-2 mt-2"><button class="btn btn-primary" id="chapter-chat-send">Envoyer</button><button class="btn btn-soft" type="button" id="chapter-chat-reset">Nouvelle discussion</button></div>
+      <p class="small text-muted mt-2 mb-0" id="chapter-chat-status" role="status"></p>
+      <p class="small text-danger mt-2 mb-0" id="chapter-chat-error" role="alert"></p>
+    </form>
+  </div>
+</details>
