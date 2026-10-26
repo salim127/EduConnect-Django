@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}{{ object.titre }}{% endblock %}
+{% block page_title %}{{ object.titre }}{% endblock %}
+{% block crumbs %}
+<li class="breadcrumb-item">Ressources</li>
+<li class="breadcrumb-item"><a href="{% url 'ressources:bibliotheque' %}">Bibliothèque</a></li>
+<li class="breadcrumb-item active">{{ object.titre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Carte principale de la ressource -->
+  <div class="col-lg-5">
+    <div class="card-x card-pad">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="icon-box {% if object.type == 'pdf' %}tone-amber{% elif object.type == 'video' %}tone-teal{% else %}tone-primary{% endif %}" style="width:56px;height:56px;font-size:1.5rem">
+          <i class="bi {% if object.type == 'pdf' %}bi-file-earmark-pdf{% elif object.type == 'video' %}bi-play-circle{% else %}bi-easel{% endif %}"></i>
+        </div>
+        <div>
+          <h4 class="mb-1">{{ object.titre }}</h4>
+          <div class="small text-muted">
+            <span class="badge-soft badge-primary me-1">{{ object.get_type_ressource_display }}</span>
+            {{ object.categorie }}
+          </div>
+        </div>
+      </div>
+
+      {% if object.info %}
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-info-circle text-muted"></i>
+        <span class="small">{{ object.info }}</span>
+      </div>
+      {% endif %}
+
+      {% if object.url %}
+      <a href="{{ object.url }}" target="_blank" rel="noopener" class="btn btn-primary w-100 mb-3">
+        <i class="bi bi-box-arrow-up-right me-2"></i>Ouvrir la ressource
+      </a>
+      {% else %}
+      <div class="alert alert-soft mb-3 small"><i class="bi bi-link-45deg me-1"></i>Aucun lien associé</div>
+      {% endif %}
+
+      <div class="d-flex gap-2 border-top pt-3 mt-1">
+        {% if perms.ressources.change_ressource %}
+        <a href="{% url 'ressources:ressource_update' object.pk %}" class="btn btn-soft btn-sm">
+          <i class="bi bi-pencil me-1"></i>Modifier
+        </a>
+        {% endif %}
+        {% if perms.ressources.delete_ressource %}
+        <button class="btn btn-soft btn-sm text-danger"
+          data-bs-toggle="modal" data-bs-target="#deleteModal"
+          data-url="{% url 'ressources:ressource_delete' object.pk %}"
+          data-name="{{ object.titre }}">
+          <i class="bi bi-trash me-1"></i>Supprimer
+        </button>
+        {% endif %}
+        <a href="{% url 'ressources:bibliotheque' %}" class="btn btn-soft btn-sm ms-auto">
+          <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fiche Pédagogique IA (enseignants/admins) -->
+  {% if perms.ressources.change_ressource %}
+  <div class="col-lg-7">
+    <div class="card-x card-pad" id="fiche-ia-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <h5 class="mb-0"><i class="bi bi-stars me-2 text-primary"></i>Fiche Pédagogique IA</h5>
+          <p class="small text-muted mb-0 mt-1">Générée automatiquement par Gemini pour vous aider à exploiter cette ressource en cours.</p>
+        </div>
+        <button id="btn-generer-fiche" class="btn btn-primary btn-sm"
+          data-url="{% url 'ressources:fiche_ia' object.pk %}">
+          <i class="bi bi-magic me-1"></i>Générer
+        </button>
+      </div>
+
+      <!-- État initial -->
+      <div id="fiche-placeholder" class="text-center py-4 text-muted">
+        <i class="bi bi-stars fs-1 d-block mb-2 opacity-25"></i>
+        <p class="small">Cliquez sur <strong>Générer</strong> pour créer la fiche pédagogique avec l'IA.</p>
+        <p class="small opacity-75">Le résultat est mis en cache 24h pour éviter les re-générations inutiles.</p>
+      </div>
+
+      <!-- Chargement -->
+      <div id="fiche-loading" class="text-center py-4 d-none">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement…</span></div>
+        <p class="small text-muted mt-2">Gemini analyse la ressource…</p>
+      </div>
+
+      <!-- Erreur -->
+      <div id="fiche-error" class="alert alert-danger d-none" role="alert"></div>
+
+      <!-- Résultat -->
+      <div id="fiche-result" class="d-none">
+        <div class="mb-3">
+          <h6 class="text-primary mb-2"><i class="bi bi-bullseye me-1"></i>Objectifs pédagogiques</h6>
+          <ul id="fiche-objectifs" class="mb-0 ps-3 small"></ul>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <div class="card-x p-3">
+              <div class="small text-muted mb-1"><i class="bi bi-people me-1"></i>Public cible</div>
+              <div class="small fw-semibold" id="fiche-public"></div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="card-x p-3">
+              <div class="small text-muted mb-1"><i class="bi bi-clock me-1"></i>Durée estimée</div>
+              <div class="small fw-semibold" id="fiche-duree"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="small text-muted mb-1"><i class="bi bi-check2-circle me-1"></i>Prérequis</div>
+          <div class="small" id="fiche-prerequis"></div>
+        </div>
+        <div class="mb-3">
+          <h6 class="text-primary mb-2"><i class="bi bi-list-ol me-1"></i>Comment l'utiliser en classe</h6>
+          <ol id="fiche-comment" class="mb-0 ps-3 small"></ol>
+        </div>
+        <div class="mb-3">
+          <h6 class="text-primary mb-2"><i class="bi bi-lightbulb me-1"></i>Conseils de l'enseignant</h6>
+          <ul id="fiche-conseils" class="mb-0 ps-3 small"></ul>
+        </div>
+        <div id="fiche-complementaires-section" class="mb-1 d-none">
+          <h6 class="text-primary mb-2"><i class="bi bi-collection me-1"></i>Ressources complémentaires suggérées</h6>
+          <ul id="fiche-complementaires" class="mb-0 ps-3 small"></ul>
+        </div>
+        <div class="border-top pt-3 mt-3 d-flex gap-2">
+          <button id="btn-regenerer-fiche" class="btn btn-soft btn-sm">
+            <i class="bi bi-arrow-clockwise me-1"></i>Régénérer
+          </button>
+          <button id="btn-copier-fiche" class="btn btn-soft btn-sm">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const btnGen = document.getElementById('btn-generer-fiche');
+  const btnRegen = document.getElementById('btn-regenerer-fiche');
+  const btnCopy = document.getElementById('btn-copier-fiche');
+  const placeholder = document.getElementById('fiche-placeholder');
+  const loading = document.getElementById('fiche-loading');
+  const errorBox = document.getElementById('fiche-error');
+  const result = document.getElementById('fiche-result');
+  const url = btnGen ? btnGen.dataset.url : null;
+
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '—';
+  }
+  function setList(id, items, tag = 'li') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = (items || []).map(i => `<${tag}>${i}</${tag}>`).join('');
+  }
+
+  function showLoading() {
+    placeholder.classList.add('d-none');
+    loading.classList.remove('d-none');
+    errorBox.classList.add('d-none');
+    result.classList.add('d-none');
+    btnGen.disabled = true;
+  }
+  function showError(msg) {
+    loading.classList.add('d-none');
+    errorBox.textContent = '⚠️ ' + msg;
+    errorBox.classList.remove('d-none');
+    result.classList.add('d-none');
+    btnGen.disabled = false;
+  }
+  function showResult(fiche) {
+    loading.classList.add('d-none');
+    errorBox.classList.add('d-none');
+    result.classList.remove('d-none');
+    btnGen.disabled = false;
+    setList('fiche-objectifs', fiche.objectifs);
+    setText('fiche-public', fiche.public_cible);
+    setText('fiche-duree', fiche.duree_estimee);
+    setText('fiche-prerequis', fiche.prerequis);
+    setList('fiche-comment', fiche.comment_utiliser, 'li');
+    setList('fiche-conseils', fiche.conseils);
+    const compl = fiche.ressources_complementaires || [];
+    if (compl.length) {
+      setList('fiche-complementaires', compl);
+      document.getElementById('fiche-complementaires-section').classList.remove('d-none');
+    }
+  }
+
+  async function generer(force = false) {
+    if (!url) return;
+    showLoading();
+    try {
+      const body = new FormData();
+      body.append('csrfmiddlewaretoken', document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+      if (force) body.append('force', '1');
+      const resp = await fetch(url, { method: 'POST', body });
+      const data = await resp.json();
+      if (!resp.ok) { showError(data.error || 'Erreur inconnue.'); return; }
+      showResult(data.fiche);
+    } catch (e) {
+      showError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+    }
+  }
+
+  if (btnGen) btnGen.addEventListener('click', () => generer(false));
+  if (btnRegen) btnRegen.addEventListener('click', () => generer(true));
+  if (btnCopy) btnCopy.addEventListener('click', () => {
+    const text = document.getElementById('fiche-result')?.innerText || '';
+    navigator.clipboard.writeText(text).then(() => {
+      btnCopy.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copié !';
+      setTimeout(() => { btnCopy.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copier'; }, 2000);
+    });
+  });
+})();
+</script>
+{% endblock %}

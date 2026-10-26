@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ titre_page }}{% endblock %}
+{% block page_title %}{{ titre_page }}{% endblock %}
+{% block crumbs %}
+<li class="breadcrumb-item">Ressources</li>
+<li class="breadcrumb-item"><a href="{% url 'ressources:categories' %}">Catégories</a></li>
+<li class="breadcrumb-item active">{% if object %}Modifier{% else %}Ajouter{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="card-x card-pad" style="max-width:600px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  {% include "components/field.html" with field=form.nom %}
+  {% include "components/field.html" with field=form.icone %}
+  {% include "components/field.html" with field=form.couleur %}
+
+  <div class="d-flex gap-2 pt-3">
+    <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    <a href="{% url 'ressources:categories' %}" class="btn btn-soft">Annuler</a>
+  </div>
+</form>
+{% endblock %}

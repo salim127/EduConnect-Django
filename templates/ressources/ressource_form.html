@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ titre_page }}{% endblock %}
+{% block page_title %}{{ titre_page }}{% endblock %}
+{% block crumbs %}
+<li class="breadcrumb-item">Ressources</li>
+<li class="breadcrumb-item"><a href="{% url 'ressources:bibliotheque' %}">Bibliothèque</a></li>
+<li class="breadcrumb-item active">{% if object %}Modifier{% else %}Ajouter{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="card-x card-pad" style="max-width:700px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  {% include "components/field.html" with field=form.titre %}
+  <div class="row">
+    <div class="col-md-6">{% include "components/field.html" with field=form.categorie %}</div>
+    <div class="col-md-6">{% include "components/field.html" with field=form.type_ressource %}</div>
+  </div>
+  {% include "components/field.html" with field=form.info %}
+  {% include "components/field.html" with field=form.url %}
+
+  <div class="d-flex gap-2 pt-3">
+    <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    <a href="{% if object %}{% url 'ressources:ressource_detail' object.pk %}{% else %}{% url 'ressources:bibliotheque' %}{% endif %}" class="btn btn-soft">Annuler</a>
+  </div>
+</form>
+{% endblock %}
