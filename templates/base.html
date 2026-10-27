@@ -20,8 +20,14 @@
     {% if perms.pedagogie.change_exercice %}<a class="nav-link-x {% if v == 'pedagogie:gradebook' %}active{% endif %}" href="{% url 'pedagogie:gradebook' %}"><i class="bi bi-clipboard-data"></i><span class="label">Notes des étudiants</span></a>{% elif perms.pedagogie.view_exercice %}<a class="nav-link-x {% if v == 'pedagogie:my_grades' %}active{% endif %}" href="{% url 'pedagogie:my_grades' %}"><i class="bi bi-mortarboard"></i><span class="label">Mes notes</span></a>{% endif %}
 
     <div class="nav-section">Coaching</div>
-    <a class="nav-link-x {% if v == 'coaching:sessions' %}active{% endif %}" href="{% url 'coaching:sessions' %}"><i class="bi bi-calendar-event"></i><span class="label">Sessions de coaching</span><span class="tag" title="Démonstration"></span></a>
-    <a class="nav-link-x {% if v == 'coaching:conseils' %}active{% endif %}" href="{% url 'coaching:conseils' %}"><i class="bi bi-lightbulb"></i><span class="label">Conseils pédagogiques</span><span class="tag" title="Démonstration"></span></a>
+    <a class="nav-link-x {% if v == 'coaching:dashboard' %}active{% endif %}" href="{% url 'coaching:dashboard' %}"><i class="bi bi-speedometer2"></i><span class="label">Vue d’ensemble</span></a>
+    <a class="nav-link-x {% if v == 'coaching:sessions' %}active{% endif %}" href="{% url 'coaching:sessions' %}"><i class="bi bi-calendar3"></i><span class="label">Calendrier</span></a>
+    <a class="nav-link-x {% if 'coaching:session_' in v %}active{% endif %}" href="{% url 'coaching:session_list' %}"><i class="bi bi-calendar-event"></i><span class="label">Sessions de coaching</span></a>
+    <a class="nav-link-x {% if 'coaching:conseil_' in v %}active{% endif %}" href="{% url 'coaching:conseil_list' %}"><i class="bi bi-lightbulb"></i><span class="label">Conseils pédagogiques</span></a>
+    {% if perms.coaching.add_bookingrequest %}<a class="nav-link-x {% if v == 'coaching:booking_search' %}active{% endif %}" href="{% url 'coaching:booking_search' %}"><i class="bi bi-calendar-plus"></i><span class="label">Réserver une séance</span></a>{% endif %}
+    {% if perms.coaching.view_bookingrequest %}<a class="nav-link-x {% if 'coaching:booking_' in v %}active{% endif %}" href="{% url 'coaching:booking_list' %}"><i class="bi bi-inbox"></i><span class="label">Réservations</span></a>{% endif %}
+    {% if perms.coaching.view_coachavailability %}<a class="nav-link-x {% if v == 'coaching:availability' %}active{% endif %}" href="{% url 'coaching:availability' %}"><i class="bi bi-calendar-week"></i><span class="label">Disponibilités</span></a>{% endif %}
+    {% if perms.coaching.view_coachingaction %}<a class="nav-link-x {% if v == 'coaching:learning_path' %}active{% endif %}" href="{% url 'coaching:learning_path' %}"><i class="bi bi-signpost-split"></i><span class="label">Parcours pédagogique</span></a>{% endif %}
 
     <div class="nav-section">Ressources</div>
     <a class="nav-link-x {% if v == 'ressources:bibliotheque' %}active{% endif %}" href="{% url 'ressources:bibliotheque' %}"><i class="bi bi-collection-play"></i><span class="label">Bibliothèque</span></a>

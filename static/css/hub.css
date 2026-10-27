@@ -136,6 +136,17 @@ body.sidebar-collapsed .nav-link-x { justify-content: center; }
 .cal td.empty-day { background: transparent; }
 .cal td.today { outline: 2px solid var(--indigo); }
 .cal .ev { display: block; margin-top: .25rem; padding: .15rem .35rem; border-radius: 6px; font-size: .68rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coaching-calendar td { height: 128px; min-width: 120px; padding: .45rem; }
+.calendar-day-number { display: block; font-weight: 700; margin-bottom: .3rem; }
+.calendar-event { display: block; padding: .28rem .4rem; margin: .25rem 0; border-radius: 7px; font-size: .7rem; line-height: 1.35; overflow-wrap: anywhere; }
+.calendar-event-time { font-weight: 800; white-space: nowrap; }
+.calendar-status { display: block; font-size: .62rem; opacity: .82; }
+.calendar-event.status-planifiee, .calendar-key.status-planifiee { background: var(--indigo-50); color: var(--indigo); }
+.calendar-event.status-terminee, .calendar-key.status-terminee { background: var(--teal-50); color: #00796f; }
+.calendar-event.status-annulee, .calendar-key.status-annulee { background: #eceaf3; color: var(--muted); }
+.calendar-key { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: -.1rem; margin-right: .3rem; }
+.coaching-next-session { background: linear-gradient(120deg, var(--indigo-50), #fff 70%); border: 1px solid var(--line); color: var(--ink); }
+.coaching-next-session:hover { border-color: var(--indigo); }
 .ev.primary { background: var(--indigo-50); color: var(--indigo); } .ev.teal { background: var(--teal-50); color: #008a7f; } .ev.amber { background: var(--amber-50); color: #a46500; }
 .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: .4rem 1rem; font-weight: 600; font-size: .85rem; color: var(--ink); }
 .chip.active { background: var(--indigo); color: #fff; border-color: var(--indigo); }
@@ -169,6 +180,7 @@ body.sidebar-collapsed .nav-link-x { justify-content: center; }
   .card-pad { padding: 1rem; } .stat .num { font-size: 1.6rem; }
   .cal td { height: 56px; padding: .25rem; font-size: .7rem; } .cal .ev { display: none; } .cal { border-spacing: 3px; }
   .modal-dialog { margin: 1rem; }
+  .coaching-calendar td { height: 92px; min-width: 96px; } .calendar-event { font-size: .64rem; padding: .2rem .3rem; } .calendar-status { font-size: .58rem; }
 }
 
 

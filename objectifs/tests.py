@@ -383,7 +383,7 @@ class AssignmentTests(TestCase):
         from django.test import override_settings
         from .statistiques import analyse_gemini
         payload = {'candidates': [{'content': {'parts': [{'text': 'Données insuffisantes.'}]}}]}
-        with override_settings(GEMINI_API_KEY='secret-test', GEMINI_MODEL='gemini-2.5-flash'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as mocked:
+        with override_settings(GEMINI_API_KEY='secret-test', GEMINI_MODEL='gemini-2.5-flash'), patch('config.gemini.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as mocked:
             self.assertEqual(analyse_gemini(self.goal, 60), 'Données insuffisantes.')
             req = mocked.call_args.args[0]
             self.assertNotIn('secret-test', req.full_url)
@@ -568,12 +568,12 @@ class AssignmentTests(TestCase):
         from django.test import override_settings
         from .statistiques import appel_gemini
         payload = {'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': '{"groupes": []}'}]}}]}
-        with override_settings(GEMINI_API_KEY='test', GEMINI_MODEL='gemini-2.5-flash'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as api:
+        with override_settings(GEMINI_API_KEY='test', GEMINI_MODEL='gemini-2.5-flash'), patch('config.gemini.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())) as api:
             self.assertEqual(appel_gemini('test', json_mode=True), '{"groupes": []}')
             config = json.loads(api.call_args.args[0].data)['generationConfig']
             self.assertEqual(config['responseMimeType'], 'application/json')
             self.assertEqual(config['thinkingConfig']['thinkingBudget'], 0)
         payload['candidates'][0]['finishReason'] = 'MAX_TOKENS'
-        with override_settings(GEMINI_API_KEY='test'), patch('objectifs.statistiques.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())):
+        with override_settings(GEMINI_API_KEY='test'), patch('config.gemini.urlopen', return_value=io.BytesIO(json.dumps(payload).encode())):
             with self.assertRaisesMessage(ValueError, 'interrompue'):
                 appel_gemini('test', json_mode=True)

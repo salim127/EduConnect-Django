@@ -1,0 +1,90 @@
+/* Coaching-only visual layer. All selectors stay under .coaching-shell. */
+.coaching-shell{--coach-ink:#231d45;--coach-muted:#706d86;--coach-line:#e8e7f0;--coach-primary:#3d348b;color:var(--coach-ink)}
+.coaching-shell .coaching-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.35rem}
+.coaching-shell .coaching-heading h2{font-size:clamp(1.4rem,2.5vw,2rem);font-weight:750;margin:.25rem 0}
+.coaching-shell .coaching-heading p{color:var(--coach-muted);margin:0}
+.coaching-shell .coaching-kicker{font-size:.72rem;font-weight:750;letter-spacing:.12em;color:#6258a5}
+.coaching-shell .coaching-panel{background:#fff;border:1px solid var(--coach-line);border-radius:16px;padding:clamp(1rem,2vw,1.5rem);box-shadow:0 5px 22px rgba(35,29,69,.055)}
+.coaching-shell .coaching-panel h3{font-weight:700}
+.coaching-shell .coaching-panel .badge{align-self:flex-start;flex-shrink:0}
+.coaching-shell .coaching-slot{height:100%;padding:1rem;border:1px solid var(--coach-line);border-radius:12px;background:#fbfaff}
+.coaching-shell .coaching-empty{padding:2.5rem 1rem;text-align:center;color:var(--coach-muted);background:#faf9fd;border:1px dashed #d9d6e9;border-radius:12px}
+.coaching-shell .progress{height:.7rem;border-radius:99px;background:#eeedf5}
+.coaching-shell .progress-bar{background:linear-gradient(90deg,#3d348b,#00a99a);border-radius:inherit}
+.coaching-shell .table>:not(caption)>*>*{padding:.85rem .7rem;border-color:var(--coach-line)}
+.coaching-shell .table thead th{font-size:.77rem;color:var(--coach-muted);text-transform:uppercase;letter-spacing:.04em}
+#coaching-calendar{min-height:550px}.fc{--fc-border-color:#e8e7f0;--fc-button-bg-color:#3d348b;--fc-button-border-color:#3d348b;--fc-button-hover-bg-color:#32297a;--fc-button-hover-border-color:#32297a;--fc-today-bg-color:rgba(0,184,169,.08);font-family:inherit}
+.fc .fc-toolbar-title{font-size:1.25rem;font-weight:700}.fc .fc-event{cursor:pointer;border-radius:5px}.fc .coaching-event-planifiee{background:#3d348b;border-color:#3d348b}.fc .coaching-event-terminee{background:#078579;border-color:#078579}.fc .coaching-event-annulee{background:#77738a;border-color:#77738a}.fc .coaching-event-pending{background:#d49412;border-color:#d49412}.fc .coaching-availability{background:rgba(0,184,169,.13)!important}.fc .coaching-unavailable{background:rgba(205,72,89,.12)!important}
+@media(max-width:767.98px){.coaching-shell .coaching-heading{align-items:flex-start;flex-direction:column}.fc .fc-toolbar{gap:.5rem;flex-wrap:wrap}.fc .fc-toolbar-chunk{display:flex;justify-content:center}.fc .fc-toolbar-title{font-size:1rem}#coaching-calendar{min-height:460px}.fc .fc-button{padding:.35rem .5rem;font-size:.8rem}}
+@media(prefers-reduced-motion:no-preference){.coaching-shell .coaching-panel,.coaching-shell .coaching-slot{transition:box-shadow .16s ease,border-color .16s ease}.coaching-shell .coaching-panel:hover,.coaching-shell .coaching-slot:hover{box-shadow:0 8px 26px rgba(35,29,69,.09)}}
+
+/* Calendar workspace: keep this layer isolated from other EduConnect pages. */
+.coaching-agenda { max-width: 1440px; margin: 0 auto; }
+.coaching-agenda .coaching-heading { margin-bottom: 24px; padding-top: 5px; }
+.coaching-agenda .coaching-heading h2 { margin: 8px 0; letter-spacing: -.04em; }
+.coaching-agenda .coaching-heading p { font-size: .9rem; line-height: 1.7; }
+.coaching-agenda .coaching-agenda-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.coaching-agenda .coaching-agenda-actions .btn { display: inline-flex; align-items: center; min-height: 44px; border-radius: 11px; font-size: .85rem; }
+.coaching-agenda .coaching-agenda-card { overflow: hidden; border: 1px solid #e4e2ef; border-radius: 20px; background: #fff; box-shadow: 0 6px 30px #231d4506; }
+.coaching-agenda .coaching-agenda-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 26px 20px; }
+.coaching-agenda .coaching-agenda-period { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.coaching-agenda #calendar-title { min-width: 145px; font-size: 1.2rem; font-weight: 750; letter-spacing: -.03em; text-transform: capitalize; }
+.coaching-agenda .coaching-agenda-arrows { display: flex; gap: 3px; }
+.coaching-agenda .coaching-agenda-arrows button, .coaching-agenda .coaching-agenda-today { background: #fff; color: #514b70; border: 1px solid #e5e3ed; border-radius: 9px; min-height: 38px; font-size: .8rem; font-weight: 600; }
+.coaching-agenda .coaching-agenda-arrows button { width: 36px; }
+.coaching-agenda .coaching-agenda-today { padding: 8px 12px; }
+.coaching-agenda .coaching-agenda-arrows button:hover, .coaching-agenda .coaching-agenda-today:hover { background: #f5f3fb; color: #3d348b; border-color: #c9c4e5; }
+.coaching-agenda .coaching-agenda-views { display: flex; padding: 4px; border: 1px solid #eeecf4; background: #f7f6fb; border-radius: 11px; }
+.coaching-agenda .coaching-agenda-views button { border: 0; background: transparent; color: #77718c; border-radius: 8px; padding: 8px 15px; font-size: .8rem; font-weight: 600; min-height: 36px; white-space: nowrap; }
+.coaching-agenda .coaching-agenda-views button[aria-pressed="true"] { background: #fff; color: #3d348b; box-shadow: 0 2px 7px #231d4512; }
+.coaching-agenda button:focus-visible, .coaching-agenda .fc a:focus-visible { outline: 3px solid #9b8de2; outline-offset: 3px; }
+.coaching-agenda button:disabled { opacity: .45; cursor: not-allowed; }
+.coaching-agenda .coaching-agenda-meta { display: flex; justify-content: space-between; gap: 12px; padding: 0 26px 18px; font-size: .73rem; color: #79738d; }
+.coaching-agenda .coaching-agenda-zone { color: #938da5; }
+.coaching-agenda #coaching-calendar { min-height: 0; margin: 0 22px; }
+.coaching-agenda .fc { font-family: inherit; font-size: .82rem; --fc-border-color: #eceaf2; --fc-today-bg-color: #f4f1ff; }
+.coaching-agenda .fc .fc-scrollgrid { border-color: #eceaf2; border-radius: 12px 12px 0 0; }
+.coaching-agenda .fc th { background: #faf9fd; font-size: .72rem; font-weight: 600; color: #827b95; text-transform: uppercase; letter-spacing: .05em; }
+.coaching-agenda .fc .fc-col-header-cell-cushion { padding: 14px 6px; color: #827b95; }
+.coaching-agenda .fc .fc-daygrid-day-top { padding: 8px 9px 3px; }
+.coaching-agenda .fc .fc-daygrid-day-number { display: inline-flex; align-items: center; justify-content: center; width: 29px; height: 29px; padding: 0; color: #504969; font-size: .79rem; font-weight: 600; border-radius: 50%; }
+.coaching-agenda .fc .fc-day-other .fc-daygrid-day-number { color: #b5afc5; }
+.coaching-agenda .fc .fc-day-today .fc-daygrid-day-number { background: #3d348b; color: #fff; box-shadow: 0 3px 8px #3d348b24; }
+.coaching-agenda .fc .fc-daygrid-event { margin: 3px 5px; padding: 4px 6px; border-radius: 6px; font-size: .72rem; }
+.coaching-agenda .fc .fc-event-title { font-weight: 600; }
+.coaching-agenda .fc .coaching-event-planifiee { background: #eeebfb; border: 0; border-left: 3px solid #6a56bd; color: #4d3d8e; }
+.coaching-agenda .fc .coaching-event-terminee { background: #e7f6f0; border: 0; border-left: 3px solid #218c6a; color: #216e58; }
+.coaching-agenda .fc .coaching-event-pending { background: #fff4dc; border: 0; border-left: 3px solid #ce931a; color: #8a6415; }
+.coaching-agenda .fc .coaching-event-annulee { background: #f1f0f5; border: 0; border-left: 3px solid #a49eb3; color: #797288; }
+.coaching-agenda .fc .fc-event:hover { filter: brightness(.97); }
+.coaching-agenda .fc .fc-timegrid-slot { height: 42px; }
+.coaching-agenda .coaching-agenda-notice, .coaching-agenda .coaching-agenda-empty { padding: 12px 26px; color: #736b8b; font-size: .8rem; background: #faf9fd; }
+.coaching-agenda .coaching-agenda-empty { border-top: 1px solid #eceaf2; }
+.coaching-agenda .coaching-agenda-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 19px 26px; font-size: .75rem; }
+.coaching-agenda .coaching-agenda-footer a { font-weight: 600; white-space: nowrap; }
+.coaching-agenda .coaching-agenda-legend { display: flex; flex-wrap: wrap; gap: 18px; color: #79738d; }
+.coaching-agenda .coaching-agenda-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.coaching-agenda .coaching-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.coaching-agenda .is-planned { background: #6a56bd; }.coaching-agenda .is-completed { background: #218c6a; }.coaching-agenda .is-pending { background: #ce931a; }.coaching-agenda .is-cancelled { background: #a49eb3; }
+/* FullCalendar v7 exposes styling hooks instead of the v6 .fc-* selectors. */
+.coaching-agenda #coaching-calendar { font-family: inherit; font-size: .82rem; }
+.coaching-agenda .coaching-calendar-day-header { background: #faf9fd; color: #746b89; font-size: .72rem; }
+.coaching-agenda .coaching-calendar-today { background: #f4f1ff; }
+.coaching-agenda .coaching-calendar-event { border-radius: 6px; font-size: .75rem; cursor: pointer; }
+.coaching-agenda .coaching-calendar-event-title { font-weight: 600; }
+.coaching-agenda .coaching-calendar-event:hover { filter: brightness(.95); }
+.coaching-agenda .coaching-calendar-event:focus-visible { outline: 3px solid #9b8de2; outline-offset: 2px; }
+.coaching-agenda .coaching-availability { background: #e7f6f0; }
+.coaching-agenda .coaching-unavailable { background: #f8dfe4; }
+@media(max-width: 1100px) { .coaching-agenda .coaching-agenda-toolbar { flex-wrap: wrap; }.coaching-agenda .coaching-agenda-period { flex: 1 1 100%; }.coaching-agenda .coaching-agenda-views { margin-left: auto; } }
+@media(max-width: 575.98px) {
+  .coaching-agenda .coaching-agenda-card { border-radius: 14px; }
+  .coaching-agenda .coaching-agenda-toolbar { padding: 16px 12px; gap: 14px; }
+  .coaching-agenda .coaching-agenda-period { gap: 10px; }.coaching-agenda #calendar-title { font-size: 1rem; min-width: 0; flex: 1; }
+  .coaching-agenda .coaching-agenda-today { font-size: .7rem; padding: 6px 8px; }
+  .coaching-agenda .coaching-agenda-views { width: 100%; }.coaching-agenda .coaching-agenda-views button { flex: 1; padding: 7px; font-size: .72rem; }
+  .coaching-agenda .coaching-agenda-meta { padding: 0 12px 14px; font-size: .65rem; }.coaching-agenda .coaching-agenda-zone { display: none; }
+  .coaching-agenda #coaching-calendar { margin: 0 8px; }.coaching-agenda .fc .fc-col-header-cell-cushion { font-size: .63rem; padding: 12px 2px; }
+  .coaching-agenda .fc .fc-daygrid-day-top { padding: 4px 2px; }.coaching-agenda .fc .fc-daygrid-event { padding: 2px; font-size: .6rem; margin: 2px; }
+  .coaching-agenda .coaching-agenda-footer { padding: 16px 12px; align-items: flex-start; flex-direction: column; }.coaching-agenda .coaching-agenda-legend { gap: 12px; font-size: .68rem; }
+}

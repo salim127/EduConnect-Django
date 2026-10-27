@@ -26,3 +26,31 @@ def ensure_system_roles():
     for name, perms in defaults.items():
         group, _ = Group.objects.get_or_create(name=name)
         group.permissions.add(*perms)
+        # Ajout ciblé et idempotent des permissions Coaching, sans remplacer
+        # les permissions existantes ou personnalisées.
+        if name == ADMIN:
+            coaching_actions = {
+                model: crud for model in (
+                    'sessioncoaching', 'conseilpedagogique', 'coachavailability',
+                    'coachavailabilityexception', 'bookingrequest', 'coachingaction',
+                )
+            }
+            extra_codes = []
+        elif name == TEACHER:
+            coaching_actions = {
+                'sessioncoaching': crud, 'conseilpedagogique': crud,
+                'coachavailability': crud, 'coachavailabilityexception': crud,
+                'bookingrequest': ('view', 'change'), 'coachingaction': crud,
+            }
+            extra_codes = []
+        else:
+            coaching_actions = {
+                'sessioncoaching': ('view',), 'conseilpedagogique': ('view',),
+                'bookingrequest': ('add', 'view', 'change'),
+                'coachingaction': ('view', 'change'),
+            }
+            extra_codes = ['view_own_coachingaction']
+        codes = [f'{action}_{model}' for model, actions in coaching_actions.items() for action in actions]
+        codes.extend(extra_codes)
+        coaching = Permission.objects.filter(content_type__app_label='coaching', codename__in=codes)
+        group.permissions.add(*coaching)
