@@ -17,6 +17,8 @@ from urllib.parse import urlsplit
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
+from config.storage import default_media_storage
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,6 +31,9 @@ if not ON_VERCEL and _local_env.is_file():
         'DJANGO_SECRET_KEY', 'DJANGO_DEBUG', 'DJANGO_ALLOWED_HOSTS',
         'DJANGO_CSRF_TRUSTED_ORIGINS', 'DATABASE_URL',
         'GEMINI_API_KEY', 'GEMINI_MODEL', 'PEDAGOGIE_GEMINI_MODEL',
+        'BLOB_READ_WRITE_TOKEN', 'BLOB_STORE_ID',
+        'AWS_STORAGE_BUCKET_NAME', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
+        'AWS_S3_ENDPOINT_URL', 'AWS_S3_REGION_NAME',
     }
     for _line in _local_env.read_text(encoding='utf-8-sig').splitlines():
         if _line.strip() and not _line.lstrip().startswith('#') and '=' in _line:
@@ -193,6 +198,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -202,7 +208,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    # Sur Vercel le systeme de fichiers est en lecture seule : le stockage des
+    # documents bascule automatiquement sur Vercel Blob ou un stockage S3
+    # compatible des que les variables d'environnement correspondantes sont
+    # presentes (voir config/storage.py).
+    'default': default_media_storage(),
     'staticfiles': {'BACKEND': (
         'whitenoise.storage.CompressedManifestStaticFilesStorage' if _production
         else 'django.contrib.staticfiles.storage.StaticFilesStorage'
