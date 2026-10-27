@@ -22,7 +22,7 @@
 
   // Formulaire d'exercice : afficher les propositions selon le type
   const type = document.getElementById('id_type_exercice');
-  if (type) {
+  if (type && document.getElementById('id_propositions') && document.getElementById('id_bonne_reponse')) {
     const props = document.getElementById('id_propositions').closest('.field');
     const hint = document.getElementById('answer-hint');
     const area = document.getElementById('id_bonne_reponse');

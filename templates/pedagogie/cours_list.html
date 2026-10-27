@@ -7,10 +7,12 @@
 {% block content %}
 <div class="page-head">
   <div><h2>Catalogue des cours</h2><p class="text-muted mb-0">{{ paginator.count }} cours disponible{{ paginator.count|pluralize }}</p></div>
-  {% if perms.pedagogie.add_cours %}<a href="{% url 'pedagogie:cours_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Ajouter un cours</a>{% endif %}
+  {% if perms.pedagogie.add_cours %}<div class="d-flex flex-wrap gap-2"><a href="{% url 'pedagogie:cours_import' %}" class="btn btn-soft"><i class="bi bi-upload me-1"></i>Importer des cours</a><a href="{% url 'pedagogie:cours_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Créer un cours</a></div>{% endif %}
 </div>
+{% if perms.pedagogie.add_cours %}<div class="d-flex gap-2 mb-3"><a class="btn btn-sm {% if not request.GET.mes_cours %}btn-primary{% else %}btn-soft{% endif %}" href="{% url 'pedagogie:cours_list' %}">Tous les cours</a><a class="btn btn-sm {% if request.GET.mes_cours %}btn-primary{% else %}btn-soft{% endif %}" href="?mes_cours=1">Mes cours</a></div>{% endif %}
 
 <form class="card-x card-pad mb-4" method="get">
+  {% if request.GET.mes_cours %}<input type="hidden" name="mes_cours" value="1">{% endif %}
   <div class="row g-2 align-items-end">
     <div class="col-md-5"><label class="form-label">Recherche</label><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Titre, description, matière…"></div>
     <div class="col-md-3 col-6"><label class="form-label">Matière</label>
@@ -32,10 +34,11 @@
       <div class="card-pad d-flex flex-column flex-fill">
         <span class="badge badge-soft badge-primary align-self-start mb-2">{{ c.get_niveau_display }}</span>
         <h5><a href="{{ c.get_absolute_url }}" class="text-reset stretched-link-off">{{ c.titre }}</a></h5>
+        {% if c.masque %}<span class="badge badge-soft badge-amber align-self-start mb-2">Masqué aux étudiants</span>{% endif %}
         <p class="text-muted small clamp-2">{{ c.description }}</p>
         <div class="d-flex align-items-center gap-2 small text-muted mt-auto pt-2">
           <span class="avatar" style="width:28px;height:28px;font-size:.7rem">{{ c.enseignant.first_name|default:c.enseignant.username|first|upper }}</span>
-          {{ c.enseignant.get_full_name|default:c.enseignant.username }} · {{ c.exercices.count }} exo.
+          {{ c.enseignant.get_full_name|default:c.enseignant.username }} · {{ c.chapitres|length }} chapitres · {{ c.exercices.count }} exo.
         </div>
         <hr class="my-3">
         <div class="d-flex gap-2">

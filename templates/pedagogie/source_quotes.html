@@ -1,0 +1,3 @@
+{% for citation in citations %}
+<details class="small border rounded p-2 mt-2"><summary>Passage utilisé : {{ citation.label }}</summary><blockquote class="mt-2 mb-1">{{ citation.quote }}</blockquote>{% if citation.url %}<a href="{{ citation.url }}">Télécharger le document cité</a>{% endif %}</details>
+{% endfor %}

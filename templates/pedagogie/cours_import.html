@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Importer des cours{% endblock %}
+{% block page_title %}Importer des cours Word / PowerPoint{% endblock %}
+{% block content %}
+<div class="card-x card-pad" style="max-width:900px">
+  <h3>Vos documents deviennent des cours</h3>
+  <p class="text-muted">Chaque document crée un cours distinct que vous pourrez modifier, enrichir et associer à des exercices.</p>
+  <div class="row g-3 my-2"><div class="col-md-6"><div class="border rounded p-3 h-100"><h6>Word (.docx)</h6><p class="small mb-0">Les titres « Titre 1 » et « Titre 2 » deviennent des chapitres. Le texte et sa mise en forme simple sont importés.</p></div></div><div class="col-md-6"><div class="border rounded p-3 h-100"><h6>PowerPoint (.pptx)</h6><p class="small mb-0">Chaque diapositive devient un chapitre. Son titre et son texte sont récupérés dans le cours.</p></div></div></div>
+  <p class="small text-muted">Les images, tableaux, animations et mises en page complexes restent dans le fichier original téléchargeable. Pour les formats .doc et .ppt, enregistrez-les d’abord en .docx ou .pptx.</p>
+  <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% include 'components/field.html' with field=form.fichiers %}
+    <div class="form-text mb-3">10 fichiers maximum par import, 15 Mo par fichier et 50 Mo au total. Si un fichier est invalide, aucun cours n’est créé.</div>
+    <div class="row"><div class="col-md-6">{% include 'components/field.html' with field=form.matiere %}</div><div class="col-md-6">{% include 'components/field.html' with field=form.niveau %}</div></div>
+    <button class="btn btn-primary">Importer les cours</button><a href="{% url 'pedagogie:cours_list' %}" class="btn btn-soft ms-2">Annuler</a>
+  </form>
+</div>
+{% endblock %}

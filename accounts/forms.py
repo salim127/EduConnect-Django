@@ -7,7 +7,7 @@ from config.forms import BootstrapFormMixin
 
 from .roles import LEARNER, SYSTEM_ROLES
 
-PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice'), ('objectifs', 'objectifapprentissage'), ('objectifs', 'tacheapprentissage'), ('coaching', 'sessioncoaching'), ('coaching', 'conseilpedagogique')]
+PERM_MODELS = [('auth', 'user'), ('auth', 'group'), ('pedagogie', 'cours'), ('pedagogie', 'exercice'), ('objectifs', 'objectifapprentissage'), ('objectifs', 'tacheapprentissage'), ('ressources', 'categorie'), ('ressources', 'ressource'), ('coaching', 'sessioncoaching'), ('coaching', 'conseilpedagogique')]
 ACTIONS = {'add': 'Ajouter', 'change': 'Modifier', 'delete': 'Supprimer', 'view': 'Consulter'}
 
 

@@ -1,57 +1,68 @@
 {% extends "base.html" %}
-{% load pedagogie_tags %}
+{% load pedagogie_tags static %}
 {% block title %}{{ object.titre }}{% endblock %}
-{% block page_title %}Détail du cours{% endblock %}
-{% block crumbs %}<li class="breadcrumb-item">Pédagogie</li><li class="breadcrumb-item"><a href="{% url 'pedagogie:cours_list' %}">Cours</a></li><li class="breadcrumb-item active">{{ object.titre|truncatechars:30 }}</li>{% endblock %}
-
+{% block page_title %}{% if object|can_edit:user %}Gérer le cours{% else %}Espace de lecture{% endif %}{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item"><a href="{% url 'pedagogie:cours_list' %}">Cours</a></li><li class="breadcrumb-item active">{{ object.titre|truncatechars:35 }}</li>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/course-workspace.css' %}?v={{ ASSET_V }}">{% endblock %}
 {% block content %}
-<div class="row g-4">
-  <div class="col-lg-8">
-    <div class="card-x overflow-hidden">
-      <div class="course-cover" style="height:140px"><i class="bi bi-mortarboard"></i><h3 class="mb-0">{{ object.titre }}</h3></div>
-      <div class="card-pad">
-        <div class="d-flex flex-wrap gap-2 mb-3">
-          <span class="badge badge-soft badge-teal">{{ object.matiere }}</span>
-          <span class="badge badge-soft badge-primary">{{ object.get_niveau_display }}</span>
-        </div>
-        <p class="lead fs-6 text-muted">{{ object.description }}</p>
-        <hr>
-        <h5>Contenu du cours</h5>
-        <div style="white-space: pre-line">{{ object.contenu }}</div>
+<header class="course-banner mb-4">
+  <div class="d-flex gap-2 mb-3"><span class="badge bg-white text-dark">{{ object.matiere }}</span><span class="badge bg-white text-dark">{{ object.get_niveau_display }}</span></div>
+  <h2>{{ object.titre }}</h2><p>{{ object.description }}</p>
+  {% if object.masque %}<span class="badge bg-warning text-dark mb-2">Cours masqué aux étudiants</span>{% endif %}
+  <div class="d-flex flex-wrap gap-4 small"><span>{{ object.enseignant.get_full_name|default:object.enseignant.username }}</span><span>{{ plan|length }} chapitre{{ plan|length|pluralize }}</span><span>{{ nombre_exercices }} exercice{{ nombre_exercices|pluralize }}</span></div>
+</header>
+{% if object|can_edit:user %}
+<div class="card-x card-pad mb-4 d-flex flex-wrap align-items-center gap-2">
+  <div class="me-auto"><strong>Espace enseignant</strong><div class="small text-muted">Organisez les chapitres et leurs exercices.</div></div>
+  <a class="btn btn-primary btn-sm" href="{% url 'pedagogie:cours_update' object.pk %}">Modifier le cours</a>
+  <a class="btn btn-soft btn-sm" href="{% url 'pedagogie:gradebook' %}?cours={{ object.pk }}">Notes des étudiants</a>
+  {% if chapitre_actif and perms.pedagogie.add_exercice %}<a class="btn btn-primary btn-sm" href="{% url 'pedagogie:ai_generate' object.pk chapitre_actif.id %}"><i class="bi bi-stars me-1"></i>Générer des exercices IA</a>{% endif %}
+  {% if perms.pedagogie.add_exercice %}<a class="btn btn-soft btn-sm" href="{% url 'pedagogie:exercice_create' %}?cours={{ object.pk }}{% if chapitre_actif %}&amp;chapitre={{ chapitre_actif.id }}{% endif %}">+ Ajouter un exercice</a>{% endif %}
+</div>
+{% endif %}
+<div class="course-workspace">
+  <aside>
+    <nav class="card-x course-plan" aria-label="Sommaire du cours">
+      <div class="p-3 border-bottom"><strong>Programme du cours</strong><div class="small text-muted">Choisissez un chapitre à lire</div></div>
+      <a class="course-plan-link {% if not chapitre_actif %}is-active{% endif %}" href="{{ object.get_absolute_url }}"><span class="course-number"><i class="bi bi-book"></i></span><span>Présentation du cours</span></a>
+      {% for chapitre in plan %}<a class="course-plan-link {% if chapitre.id == chapitre_actif.id %}is-active{% endif %}" href="?chapitre={{ chapitre.id }}"><span class="course-number">{{ chapitre.numero }}</span><span>{{ chapitre.titre }}{% if chapitre.masque %}<span class="badge badge-soft badge-amber ms-1">Masqué</span>{% endif %}<small class="d-block text-muted">{{ chapitre.exercices|length }} exercice{{ chapitre.exercices|length|pluralize }}</small></span></a>{% endfor %}
+      {% if object|can_edit:user %}<a class="course-plan-link text-primary" href="{% url 'pedagogie:cours_update' object.pk %}#chapter-rows">+ Ajouter des chapitres</a>{% endif %}
+    </nav>
+    <div class="card-x card-pad mt-3">
+      <h6>Télécharger le cours</h6><p class="small text-muted">Word et PDF conservent la mise en forme du contenu. PowerPoint propose une présentation en diapositives.</p>
+      <div class="d-flex flex-wrap gap-2"><a class="btn btn-soft btn-sm" href="{% url 'pedagogie:cours_export' object.pk 'docx' %}"><i class="bi bi-file-earmark-word"></i> Word</a><a class="btn btn-soft btn-sm" href="{% url 'pedagogie:cours_export' object.pk 'pptx' %}"><i class="bi bi-file-earmark-ppt"></i> PowerPoint</a></div>
+      <a class="btn btn-soft btn-sm mt-2" href="{% url 'pedagogie:cours_export' object.pk 'pdf' %}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+      {% if supports_generaux %}<hr><h6>Supports du cours</h6>{% for support in supports_generaux %}<a class="d-block small mb-2 text-break" href="{% url 'pedagogie:support_download' support.pk %}"><i class="bi bi-download me-1"></i>{{ support.nom }}</a>{% endfor %}{% endif %}
+    </div>
+  </aside>
+  <div>
+    <article id="lecteur" class="card-x course-reader">
+      <div class="course-reader-head"><span class="text-uppercase small text-muted">{% if chapitre_actif %}Chapitre {{ chapitre_actif.numero }} / {{ plan|length }}{% else %}Commencer le cours{% endif %}</span><h3 class="mt-2 mb-0">{% if chapitre_actif %}{{ chapitre_actif.titre }}{% else %}Présentation du cours{% endif %}</h3></div>
+      {% if chapitre_actif %}<div class="px-4 pb-3 d-flex flex-wrap gap-2"><button type="button" class="btn btn-soft btn-sm" data-open-chapter-chat aria-controls="chapter-assistant"><i class="bi bi-chat-dots me-1"></i>Poser une question sur ce chapitre</button><a class="btn btn-soft btn-sm" href="{% url 'pedagogie:chapter_study' object.pk chapitre_actif.id %}"><i class="bi bi-journal-text me-1"></i>Résumé et fiches de révision</a>{% if perms.pedagogie.view_exercice %}<a class="btn btn-soft btn-sm" href="{% url 'pedagogie:chapter_practice' object.pk chapitre_actif.id %}"><i class="bi bi-bullseye me-1"></i>Mon entraînement adapté</a>{% endif %}</div>{% endif %}
+      <div class="reading-status"><span><i class="bi bi-book me-2"></i>Lecture paginée</span><strong>Page {{ page_lecture.number }} / {{ pages_lecture.num_pages }}</strong></div>
+      {% include 'pedagogie/reading_pagination.html' %}
+      <div class="course-reader-body course-rich">
+        {% for bloc in page_lecture.object_list.0 %}
+          {% include 'pedagogie/reading_block.html' %}
+        {% empty %}<p class="text-muted">Les documents de ce chapitre sont disponibles ci-dessous.</p>{% endfor %}
       </div>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-      <h5 class="mb-0">Exercices associés <span class="badge badge-soft badge-gray">{{ object.exercices.count }}</span></h5>
-      {% if object|can_edit:user and perms.pedagogie.add_exercice %}<a href="{% url 'pedagogie:exercice_create' %}?cours={{ object.pk }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Ajouter un exercice</a>{% endif %}
-    </div>
-    {% for e in object.exercices.all %}
-      <a href="{{ e.get_absolute_url }}" class="card-x hover card-pad d-flex align-items-center gap-3 mb-2 text-reset">
-        <div class="icon-box tone-teal"><i class="bi bi-pencil-square"></i></div>
-        <div class="flex-fill"><strong>{{ e.titre }}</strong><div class="small text-muted clamp-2">{{ e.question }}</div></div>
-        <span class="badge badge-soft badge-primary">{{ e.get_type_exercice_display }}</span>
-        <span class="badge badge-soft badge-amber">{{ e.get_difficulte_display }}</span>
-      </a>
-    {% empty %}
-      {% include "components/empty.html" with icon="bi-pencil" title="Aucun exercice" text="Ce cours ne contient pas encore d'exercice." %}
-    {% endfor %}
-  </div>
-
-  <div class="col-lg-4">
-    <div class="card-x card-pad mb-3">
-      <h6 class="text-muted text-uppercase small">Enseignant</h6>
-      <div class="d-flex align-items-center gap-3">
-        <span class="avatar">{{ object.enseignant.first_name|default:object.enseignant.username|first|upper }}</span>
-        <div><strong>{{ object.enseignant.get_full_name|default:object.enseignant.username }}</strong><div class="small text-muted">{{ object.enseignant.email }}</div></div>
+      <template id="reading-source">{% for bloc in blocs_lecture %}{% include 'pedagogie/reading_block.html' %}{% endfor %}</template>
+      {% include 'pedagogie/reading_pagination.html' %}
+      {% if supports_chapitre %}<section class="px-4 pb-4"><h5>Documents de ce chapitre</h5>{% for support in supports_chapitre %}<a class="d-block border rounded p-3 mt-2 text-break" href="{% url 'pedagogie:support_download' support.pk %}"><i class="bi bi-file-earmark-arrow-down me-2"></i>{{ support.nom }} <span class="small text-muted">— Télécharger</span></a>{% endfor %}</section>{% endif %}
+      <div class="d-flex justify-content-between gap-2 p-4 border-top">
+        {% if chapitre_actif %}<a class="btn btn-soft btn-sm" href="{% if precedent %}?chapitre={{ precedent.id }}{% else %}{{ object.get_absolute_url }}{% endif %}">← Précédent</a>{% else %}<span></span>{% endif %}
+        {% if suivant %}<a class="btn btn-primary btn-sm" href="?chapitre={{ suivant.id }}">{% if chapitre_actif %}Chapitre suivant{% else %}Commencer le premier chapitre{% endif %} →</a>{% else %}<a class="btn btn-soft btn-sm" href="{% url 'pedagogie:cours_list' %}">Retour au catalogue</a>{% endif %}
       </div>
-      <hr>
-      <div class="small text-muted"><i class="bi bi-calendar3 me-1"></i>Créé le {{ object.date_creation|date:"d/m/Y" }}</div>
-    </div>
-    <div class="card-x card-pad d-grid gap-2">
-      {% if object|can_edit:user %}<a href="{% url 'pedagogie:cours_update' object.pk %}" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Modifier</a>{% endif %}
-      {% if object|can_delete:user %}<button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'pedagogie:cours_delete' object.pk %}" data-name="{{ object.titre }}"><i class="bi bi-trash me-1"></i>Supprimer</button>{% endif %}
-      <a href="{% url 'pedagogie:cours_list' %}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Retour aux cours</a>
-    </div>
+    </article>
+    {% if chapitre_actif %}{% include 'pedagogie/chapter_chat.html' %}{% endif %}
+    <section class="mt-4" aria-label="Exercices du chapitre">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><h5 class="mb-0 me-auto">{% if chapitre_actif %}S’entraîner sur ce chapitre{% else %}Exercices généraux du cours{% endif %} <span class="badge badge-soft badge-primary">{{ exercices_affiches|length }}</span></h5>
+      {% if object|can_edit:user and perms.pedagogie.add_exercice %}<a class="btn btn-soft btn-sm" href="{% url 'pedagogie:exercice_create' %}?cours={{ object.pk }}{% if chapitre_actif %}&amp;chapitre={{ chapitre_actif.id }}{% endif %}">+ Ajouter un exercice ici</a>{% endif %}</div>
+      {% if chapitre_actif and object|can_edit:user and perms.pedagogie.add_exercice %}<a class="btn btn-primary btn-sm mb-3" href="{% url 'pedagogie:ai_generate' object.pk chapitre_actif.id %}"><i class="bi bi-stars me-1"></i>Générer des exercices avec l’IA</a>{% endif %}
+      {% for exercice in exercices_affiches %}<a class="card-x card-pad mb-2 d-flex gap-3 align-items-center text-reset" href="{{ exercice.get_absolute_url }}"><span class="icon-box tone-teal"><i class="bi bi-pencil-square"></i></span><span class="flex-fill"><strong>{{ exercice.titre }}</strong><small class="d-block text-muted">{{ exercice.get_type_exercice_display }} · {{ exercice.get_difficulte_display }}</small></span><i class="bi bi-arrow-right"></i></a>{% empty %}<div class="card-x card-pad text-muted">{% if chapitre_actif %}Aucun exercice pour ce chapitre pour le moment.{% else %}Les exercices propres aux chapitres sont accessibles dans le programme à gauche.{% endif %}</div>{% endfor %}
+    </section>
+    {% if object|can_delete:user %}<div class="mt-4 text-end"><button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'pedagogie:cours_delete' object.pk %}" data-name="{{ object.titre }}">Supprimer le cours</button></div>{% endif %}
   </div>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/course-reader.js' %}?v={{ ASSET_V }}"></script><script src="{% static 'js/chapter-chat.js' %}?v={{ ASSET_V }}"></script>{% endblock %}

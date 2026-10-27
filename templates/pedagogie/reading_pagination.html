@@ -1,0 +1,9 @@
+{% if pages_lecture.num_pages > 1 %}
+<nav class="reading-pagination" aria-label="Pages du chapitre">
+  {% if page_lecture.has_previous %}<a class="btn btn-soft btn-sm" href="?chapitre={{ chapitre_selectionne }}&amp;page={{ page_lecture.previous_page_number }}#lecteur">← Page précédente</a>{% else %}<span></span>{% endif %}
+  <div class="d-flex align-items-center flex-wrap gap-1 justify-content-center">
+    {% for numero in numeros_pages %}{% if numero == page_lecture.paginator.ELLIPSIS %}<span>…</span>{% else %}<a class="reading-page-number {% if numero == page_lecture.number %}is-active{% endif %}" {% if numero == page_lecture.number %}aria-current="page"{% endif %} href="?chapitre={{ chapitre_selectionne }}&amp;page={{ numero }}#lecteur">{{ numero }}</a>{% endif %}{% endfor %}
+  </div>
+  {% if page_lecture.has_next %}<a class="btn btn-primary btn-sm" href="?chapitre={{ chapitre_selectionne }}&amp;page={{ page_lecture.next_page_number }}#lecteur">Page suivante →</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}

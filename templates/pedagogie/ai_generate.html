@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Générer des exercices{% endblock %}
+{% block page_title %}Générer des exercices avec l’IA{% endblock %}
+{% block crumbs %}<li class="breadcrumb-item"><a href="{{ cours.get_absolute_url }}">{{ cours.titre|truncatechars:25 }}</a></li><li class="breadcrumb-item active">{{ chapitre.titre }}</li>{% endblock %}
+{% block content %}
+<div class="card-x card-pad" style="max-width:1100px">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span class="icon-box tone-teal"><i class="bi bi-stars"></i></span><div><h3 class="mb-1">{{ chapitre.titre }}</h3><span class="text-muted">Les questions seront proposées à partir du chapitre et de ses documents.</span></div></div>
+  {% if draft_id %}
+    <div class="alert alert-info">Aperçu à vérifier : aucun exercice n’est encore enregistré. Modifiez les questions, les bonnes réponses et les explications, puis validez.</div>
+    {% if draft.truncated %}<p class="small text-muted">Le chapitre étant long, une partie du contenu a été utilisée pour cette génération.</p>{% endif %}
+    <div class="d-flex gap-2 mb-3"><span class="badge badge-soft badge-primary">{{ type_label }}</span><span class="badge badge-soft badge-amber">{{ difficulty_label }}</span></div>
+    <form method="post" novalidate>{% csrf_token %}
+      <input type="hidden" name="action" value="save"><input type="hidden" name="draft_id" value="{{ draft_id }}">
+      {% if title_form.non_field_errors %}<div class="alert alert-danger">{{ title_form.non_field_errors }}</div>{% endif %}
+      {% include 'components/field.html' with field=title_form.titre %}
+      {{ questions_formset.management_form }}
+      {% if questions_formset.non_form_errors %}<div class="alert alert-danger">{{ questions_formset.non_form_errors }}</div>{% endif %}
+      {% for question in questions_formset %}
+      <section class="border rounded p-3 mb-3"><h5>Question {{ forloop.counter }}</h5>
+        {{ question.non_field_errors }}
+        {% include 'components/field.html' with field=question.question %}
+        {% if draft.type == 'qcm' %}{% include 'components/field.html' with field=question.propositions %}{% else %}<span hidden>{{ question.propositions }}</span>{% endif %}
+        {% include 'components/field.html' with field=question.bonne_reponse %}
+        {% include 'components/field.html' with field=question.explication %}
+        {% if draft.type == 'ouverte' %}{% include 'components/field.html' with field=question.bareme %}{% endif %}
+        {% include 'components/field.html' with field=question.DELETE %}
+      </section>
+      {% endfor %}
+      <button class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Valider et enregistrer l’exercice</button>
+      <a class="btn btn-soft ms-2" href="{% url 'pedagogie:ai_generate' cours.pk chapitre.id %}">Nouvelle génération</a>
+    </form>
+  {% else %}
+    <p class="text-muted">Choisissez les paramètres. Vous pourrez vérifier et modifier les propositions avant de les enregistrer.</p>
+    <form method="post" id="generate-ai-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="generate">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="row"><div class="col-md-4">{% include 'components/field.html' with field=form.nombre %}</div><div class="col-md-4">{% include 'components/field.html' with field=form.type_exercice %}</div><div class="col-md-4">{% include 'components/field.html' with field=form.difficulte %}</div></div>
+      <button class="btn btn-primary" id="generate-ai-button"><i class="bi bi-stars me-1"></i>Générer les questions</button><span role="status" id="generation-status" class="small text-muted ms-2"></span>
+    </form>
+  {% endif %}
+  <a class="d-inline-block mt-4" href="{{ cours.get_absolute_url }}?chapitre={{ chapitre.id }}">← Retour au chapitre</a>
+</div>
+{% endblock %}
+{% block extra_js %}<script>
+document.getElementById('generate-ai-form')?.addEventListener('submit', () => {
+  document.getElementById('generate-ai-button').disabled = true;
+  document.getElementById('generation-status').textContent = 'Génération en cours… Cela peut prendre quelques secondes.';
+});
+</script>{% endblock %}

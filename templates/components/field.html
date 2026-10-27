@@ -7,5 +7,5 @@
     {{ field }}
   {% endif %}
   {% if hint %}<div class="form-text" id="answer-hint">{{ hint }}</div>{% elif field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-  {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+  {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
 </div>

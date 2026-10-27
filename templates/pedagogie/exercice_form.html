@@ -15,10 +15,97 @@
     <div class="col-md-4">{% include "components/field.html" with field=form.type_exercice %}</div>
     <div class="col-md-4">{% include "components/field.html" with field=form.difficulte %}</div>
   </div>
+  {% include "components/field.html" with field=form.chapitre_id %}
+  <p class="small text-muted">Choisissez le chapitre concerné, ou laissez « Exercice général du cours ».</p>
   {% include "components/field.html" with field=form.question %}
   {% include "components/field.html" with field=form.propositions %}
   {% include "components/field.html" with field=form.bonne_reponse hint="Recopiez exactement la bonne proposition." %}
+  {% include "components/field.html" with field=form.explication %}
+  {% include "components/field.html" with field=form.bareme %}
+  <section id="extra-questions" class="my-4">
+    <h5>Questions supplémentaires</h5>
+    <p class="text-muted">La question ci-dessus est la première question de votre exercice.</p>
+    {{ questions_formset.management_form }}
+    {{ questions_formset.non_form_errors }}
+    <div id="question-rows">
+      {% for question_form in questions_formset %}
+        {% include "pedagogie/question_form.html" %}
+      {% endfor %}
+    </div>
+    <button type="button" id="add-question" class="btn btn-soft">+ Ajouter une question</button>
+    <template id="question-template">{% include "pedagogie/question_form.html" with question_form=questions_formset.empty_form %}</template>
+  </section>
   <div class="d-flex gap-2 pt-2"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button><a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'pedagogie:exercice_list' %}{% endif %}" class="btn btn-soft">Annuler</a></div>
 </form>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const section = document.getElementById('extra-questions');
+  if (!section) return;
+  const course = document.getElementById('id_cours');
+  const chapter = document.getElementById('id_chapitre_id');
+  let pending;
+  course.addEventListener('change', async () => {
+    if (pending) pending.abort();
+    pending = new AbortController();
+    const controller = pending;
+    chapter.replaceChildren(new Option('Exercice général du cours', ''));
+    if (!course.value) return;
+    chapter.disabled = true;
+    try {
+      const url = "{% url 'pedagogie:chapitres_choices' 0 %}".replace('/0/', '/' + course.value + '/');
+      const response = await fetch(url, {signal: controller.signal});
+      if (!response.ok) throw new Error('Impossible de charger les chapitres');
+      const data = await response.json();
+      data.chapitres.forEach((c, i) => chapter.add(new Option((i + 1) + '. ' + c.titre, c.id)));
+    } catch (error) {
+      if (error.name !== 'AbortError') chapter.add(new Option('Chargement impossible : rechargez la page', '', false, false));
+    } finally { if (!controller.signal.aborted) chapter.disabled = false; }
+  });
+  const type = document.getElementById('id_type_exercice');
+  const sync = () => {
+    document.getElementById('id_bareme').closest('.field').hidden = type.value !== 'ouverte';
+    section.querySelectorAll('[data-question-row]').forEach(row => {
+      row.querySelector('[name$="-bareme"]').closest('.field').hidden = type.value !== 'ouverte';
+      const props = row.querySelector('[name$="-propositions"]');
+      props.closest('.field').hidden = type.value !== 'qcm';
+      props.required = type.value === 'qcm';
+      const answer = row.querySelector('[name$="-bonne_reponse"]');
+      const value = answer.value;
+      const replacement = document.createElement(type.value === 'vf' ? 'select' : 'textarea');
+      replacement.name = answer.name; replacement.id = answer.id;
+      replacement.className = type.value === 'vf' ? 'form-select' : 'form-control';
+      replacement.required = true;
+      if (type.value === 'vf') {
+        ['', 'Vrai', 'Faux'].forEach(v => replacement.add(new Option(v || 'Choisir', v)));
+      } else replacement.rows = 3;
+      replacement.value = value;
+      answer.replaceWith(replacement);
+      const hint = replacement.closest('.field').querySelector('.form-text');
+      if (hint) hint.textContent = type.value === 'qcm' ? 'Recopiez une des propositions.' : type.value === 'vf' ? 'Choisissez Vrai ou Faux.' : 'R\u00e9ponse attendue (mod\u00e8le de correction).';
+    });
+  };
+  type.addEventListener('change', sync); sync();
+  document.getElementById('add-question').addEventListener('click', () => {
+    const total = document.getElementById('id_questions-TOTAL_FORMS');
+    if (Number(total.value) >= 100) return;
+    const html = document.getElementById('question-template').innerHTML.replaceAll('__prefix__', total.value);
+    document.getElementById('question-rows').insertAdjacentHTML('beforeend', html);
+    total.value = Number(total.value) + 1;
+    sync();
+  });
+  section.addEventListener('click', event => {
+    if (!event.target.matches('[data-remove-question]')) return;
+    const row = event.target.closest('[data-question-row]');
+    row.querySelector('input[name$="-DELETE"]').checked = true;
+    row.hidden = true;
+  });
+  section.querySelectorAll('[data-question-row]').forEach(row => {
+    if (row.querySelector('input[name$="-DELETE"]').checked) row.hidden = true;
+  });
+})();
+</script>
 {% endblock %}

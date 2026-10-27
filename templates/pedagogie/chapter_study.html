@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Réviser — {{ chapitre.titre }}{% endblock %}
+{% block page_title %}Réviser le chapitre{% endblock %}
+{% block content %}
+<div class="card-x card-pad mb-4" style="max-width:1200px">
+  <h3>{{ chapitre.titre }}</h3><p class="text-muted">Retrouvez les notions essentielles et entraînez votre mémoire avec des cartes question / réponse.</p>
+  {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+  <div class="d-flex flex-wrap gap-2">
+    <form method="post" data-ai-wait>{% csrf_token %}<input type="hidden" name="action" value="summary"><button class="btn btn-primary">{% if material.summary %}Afficher le résumé{% else %}Résumer le chapitre{% endif %}</button></form>
+    <form method="post" data-ai-wait>{% csrf_token %}<input type="hidden" name="action" value="cards"><button class="btn btn-soft">{% if material.cards %}Afficher les fiches{% else %}Créer 6 fiches de révision{% endif %}</button></form>
+  </div><p class="small text-muted mt-2 mb-0" data-ai-status role="status"></p>
+</div>
+{% if material.summary %}
+<section class="card-x card-pad mb-4" style="max-width:1200px" id="chapter-summary"><h4>Les notions essentielles</h4>
+  <ul>{% for notion in material.summary.notions %}<li class="mb-2">{{ notion }}</li>{% endfor %}</ul>
+  <h5>Exemples</h5>{% for example in material.summary.exemples %}<p>{{ example|linebreaksbr }}</p>{% endfor %}
+  {% include 'pedagogie/source_quotes.html' with citations=material.summary.citations %}
+  {% if material.summary.truncated %}<p class="small text-muted mt-2">Une partie du chapitre et de ses documents a été examinée, car le contenu est long.</p>{% endif %}
+</section>
+{% endif %}
+{% if material.cards %}
+<section style="max-width:1200px" id="chapter-flashcards"><h4>Fiches de révision</h4><p class="text-muted">Essayez de répondre avant d’ouvrir chaque carte.</p><div class="row g-3">
+  {% for card in material.cards.cartes %}<div class="col-md-6"><article class="card-x card-pad h-100"><span class="small text-muted">Carte {{ forloop.counter }} / {{ material.cards.cartes|length }}</span><h5 class="mt-2">{{ card.question }}</h5><details><summary class="text-primary">Voir la réponse</summary><p class="mt-2">{{ card.reponse|linebreaksbr }}</p>{% include 'pedagogie/source_quotes.html' with citations=card.citations %}</details></article></div>{% endfor %}
+  </div>{% if material.cards.truncated %}<p class="small text-muted mt-2">Ces cartes couvrent la partie du chapitre et des documents examinée par l’IA.</p>{% endif %}
+</section>
+{% endif %}
+<a class="btn btn-soft mt-4" href="{{ cours.get_absolute_url }}?chapitre={{ chapitre.id }}">← Retour au chapitre</a>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/learning-wait.js' %}?v={{ ASSET_V }}"></script>{% endblock %}

@@ -3,25 +3,268 @@
 {% block page_title %}Bibliothèque{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item">Ressources</li><li class="breadcrumb-item active">Bibliothèque</li>{% endblock %}
 {% block content %}
-{% include "components/demo_banner.html" %}
-<div class="page-head"><div><h2>Bibliothèque de ressources</h2><p class="text-muted mb-0">Filtres visuels de démonstration (aucune donnée enregistrée)</p></div>{% include "components/soon_button.html" with label="Ajouter une ressource" %}</div>
-<div class="card-x card-pad mb-4 d-flex flex-wrap gap-3 align-items-center">
-  <div class="topbar-search flex-fill" style="max-width:none"><i class="bi bi-search"></i><input class="form-control" data-demo-search placeholder="Rechercher une ressource…"></div>
-  <div class="d-flex gap-2 flex-wrap">
-    <button class="chip active" data-filter="all">Tout</button><button class="chip" data-filter="pdf"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
-    <button class="chip" data-filter="video"><i class="bi bi-play-circle me-1"></i>Vidéos</button><button class="chip" data-filter="support"><i class="bi bi-easel me-1"></i>Supports</button>
+<div class="page-head">
+  <div>
+    <h2>Bibliothèque de ressources</h2>
+    <p class="text-muted mb-0">{{ paginator.count }} ressource{{ paginator.count|pluralize }}</p>
   </div>
+  {% if perms.ressources.add_ressource %}
+  <a href="{% url 'ressources:ressource_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Ajouter une ressource
+  </a>
+  {% endif %}
 </div>
+
+<!-- ─── Assistant IA (tous les utilisateurs connectés) ─────────────────── -->
+<details class="card-x mb-4" id="assistant-ia-panel">
+  <summary class="card-pad" style="cursor:pointer;list-style:none">
+    <div class="d-flex align-items-center gap-3">
+      <div class="icon-box tone-primary" style="width:44px;height:44px;font-size:1.1rem;flex-shrink:0">
+        <i class="bi bi-stars"></i>
+      </div>
+      <div>
+        <strong><i class="bi bi-search-heart me-1"></i>
+          {% if perms.ressources.change_ressource %}
+            Assistant IA — Trouver des ressources pour mes cours
+          {% else %}
+            Trouve-moi une ressource
+          {% endif %}
+        </strong>
+        <div class="small text-muted mt-1">
+          {% if perms.ressources.change_ressource %}
+            Cherchez des ressources adaptées à vos cours, filtrées par matière.
+          {% else %}
+            Décrivez votre besoin, l'IA vous recommande les meilleures ressources selon la matière.
+          {% endif %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-down ms-auto text-muted" id="assistant-chevron"></i>
+    </div>
+  </summary>
+
+  <div class="px-4 pb-4">
+    <form id="assistant-form" data-url="{% url 'ressources:assistant_ia' %}">
+      {% csrf_token %}
+      <div class="row g-3 mt-2">
+        <!-- Filtre matière -->
+        <div class="col-md-4">
+          <label for="assistant-matiere" class="form-label small fw-semibold">
+            <i class="bi bi-book me-1"></i>Matière (optionnel)
+          </label>
+          <select id="assistant-matiere" name="categorie" class="form-select">
+            <option value="">Toutes les matières</option>
+            {% for cat in categories %}
+            <option value="{{ cat.pk }}">{{ cat.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <!-- Besoin -->
+        <div class="col-md-6">
+          <label for="assistant-input" class="form-label small fw-semibold">
+            <i class="bi bi-chat-left-text me-1"></i>
+            {% if perms.ressources.change_ressource %}Votre recherche{% else %}Décrivez votre besoin{% endif %}
+          </label>
+          <input type="text" id="assistant-input" name="besoin"
+            class="form-control"
+            maxlength="500"
+            placeholder="{% if perms.ressources.change_ressource %}Ex : « Exercices de complexité algorithmique »{% else %}Ex : « J'ai du mal avec les fractions »{% endif %}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100" id="assistant-btn">
+            <i class="bi bi-send me-1"></i>Chercher
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Chargement -->
+    <div id="assistant-loading" class="text-center py-3 d-none">
+      <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+      <span class="small text-muted">L'IA cherche dans la bibliothèque…</span>
+    </div>
+
+    <!-- Erreur -->
+    <div id="assistant-error" class="alert alert-danger mt-3 d-none small" role="alert"></div>
+
+    <!-- Résultats -->
+    <div id="assistant-result" class="mt-4 d-none">
+      <p id="assistant-message" class="text-muted small mb-3"></p>
+      <div id="assistant-cards" class="row g-3"></div>
+      <p id="assistant-conseil" class="small text-muted mt-3 fst-italic"></p>
+    </div>
+  </div>
+</details>
+
+
+<!-- ─── Filtres ───────────────────────────────────────────────────────────── -->
+<form class="card-x card-pad mb-4 d-flex flex-wrap gap-3 align-items-center" method="get">
+  <div class="topbar-search flex-fill" style="max-width:none">
+    <i class="bi bi-search"></i>
+    <input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Rechercher une ressource…">
+  </div>
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <select name="type" class="form-select" style="width:auto">
+      <option value="">Tous les types</option>
+      <option value="pdf" {% if type_actif == 'pdf' %}selected{% endif %}>PDF</option>
+      <option value="video" {% if type_actif == 'video' %}selected{% endif %}>Vidéo</option>
+      <option value="support" {% if type_actif == 'support' %}selected{% endif %}>Support</option>
+    </select>
+    <select name="categorie" class="form-select" style="width:auto">
+      <option value="">Toutes les catégories</option>
+      {% for cat in categories %}
+      <option value="{{ cat.pk }}" {% if cat_actif == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.nom }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-soft">Filtrer</button>
+    {% if request.GET.q or type_actif or cat_actif %}
+    <a href="{% url 'ressources:bibliotheque' %}" class="btn btn-soft">Réinitialiser</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- ─── Grille des ressources ─────────────────────────────────────────────── -->
 <div class="row g-4">
   {% for r in ressources %}
-  <div class="col-md-6 col-xl-4" data-kind="{{ r.type }}"><div class="card-x hover card-pad h-100">
-    <div class="d-flex justify-content-between mb-3">
-      <div class="icon-box {% if r.type == 'pdf' %}tone-amber{% elif r.type == 'video' %}tone-teal{% else %}tone-primary{% endif %}"><i class="bi {% if r.type == 'pdf' %}bi-file-earmark-pdf{% elif r.type == 'video' %}bi-play-circle{% else %}bi-easel{% endif %}"></i></div>
-      <span class="badge-demo align-self-start">Démo</span>
+  <div class="col-md-6 col-xl-4">
+    <div class="card-x hover card-pad h-100">
+      <div class="d-flex justify-content-between mb-3">
+        <div class="icon-box {% if r.type == 'pdf' %}tone-amber{% elif r.type == 'video' %}tone-teal{% else %}tone-primary{% endif %}">
+          <i class="bi {% if r.type == 'pdf' %}bi-file-earmark-pdf{% elif r.type == 'video' %}bi-play-circle{% else %}bi-easel{% endif %}"></i>
+        </div>
+        <div class="d-flex gap-1 align-self-start">
+          {% if perms.ressources.change_ressource %}
+          <a href="{% url 'ressources:ressource_update' r.pk %}" class="btn btn-icon btn-soft btn-sm" title="Modifier">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {% endif %}
+          {% if perms.ressources.delete_ressource %}
+          <button class="btn btn-icon btn-soft btn-sm text-danger"
+            data-bs-toggle="modal" data-bs-target="#deleteModal"
+            data-url="{% url 'ressources:ressource_delete' r.pk %}"
+            data-name="{{ r.titre }}"
+            title="Supprimer">
+            <i class="bi bi-trash"></i>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      <h6>{{ r.titre }}</h6>
+      <div class="small text-muted mb-3">{{ r.categorie }} {% if r.info %}· {{ r.info }}{% endif %}</div>
+      <div class="mt-auto d-flex gap-2">
+        <a href="{% url 'ressources:ressource_detail' r.pk %}" class="btn btn-soft btn-sm">
+          <i class="bi bi-eye me-1"></i>Détail
+        </a>
+        {% if r.url %}
+        <a href="{{ r.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir
+        </a>
+        {% endif %}
+      </div>
     </div>
-    <h6>{{ r.titre }}</h6><div class="small text-muted mb-3">{{ r.categorie }} · {{ r.info }}</div>
-    <button class="btn btn-soon btn-sm" disabled>Ouvrir · Bientôt disponible</button>
-  </div></div>
+  </div>
+  {% empty %}
+  {% include "components/empty.html" with icon="bi-collection" title="Aucune ressource" text="Commencez par ajouter une ressource à la bibliothèque." %}
   {% endfor %}
 </div>
+
+{% include "components/pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // Chevron toggle
+  const details = document.getElementById('assistant-ia-panel');
+  const chevron = document.getElementById('assistant-chevron');
+  if (details && chevron) {
+    details.addEventListener('toggle', () => {
+      chevron.classList.toggle('bi-chevron-down', !details.open);
+      chevron.classList.toggle('bi-chevron-up', details.open);
+    });
+  }
+
+  const form = document.getElementById('assistant-form');
+  const input = document.getElementById('assistant-input');
+  const btn = document.getElementById('assistant-btn');
+  const loading = document.getElementById('assistant-loading');
+  const errorBox = document.getElementById('assistant-error');
+  const resultBox = document.getElementById('assistant-result');
+  const messageEl = document.getElementById('assistant-message');
+  const cardsEl = document.getElementById('assistant-cards');
+  const conseilEl = document.getElementById('assistant-conseil');
+
+  const TYPE_ICONS = { pdf: 'bi-file-earmark-pdf', video: 'bi-play-circle', support: 'bi-easel' };
+  const TYPE_COLORS = { pdf: 'tone-amber', video: 'tone-teal', support: 'tone-primary' };
+
+  function getCsrf() {
+    return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+  }
+
+  function buildCard(rec) {
+    const icon = TYPE_ICONS[rec.type?.toLowerCase()] || 'bi-file';
+    const color = TYPE_COLORS[rec.type?.toLowerCase()] || 'tone-primary';
+    return `
+      <div class="col-md-6 col-lg-4">
+        <div class="card-x card-pad h-100 border-2" style="border-color:var(--hub-primary-light,#dbeafe)!important">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <div class="icon-box ${color}" style="width:36px;height:36px;font-size:.9rem">
+              <i class="bi ${icon}"></i>
+            </div>
+            <div class="small fw-semibold">${rec.titre}</div>
+          </div>
+          <div class="small text-muted mb-2">${rec.categorie}${rec.info ? ' · ' + rec.info : ''}</div>
+          <div class="small mb-3 text-success">
+            <i class="bi bi-check-circle me-1"></i>${rec.explication}
+          </div>
+          <div class="d-flex gap-2 mt-auto">
+            <a href="${rec.detail_url}" class="btn btn-soft btn-sm"><i class="bi bi-eye me-1"></i>Voir</a>
+            ${rec.url ? `<a href="${rec.url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm"><i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir</a>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const besoin = input.value.trim();
+      if (!besoin) { input.focus(); return; }
+
+      btn.disabled = true;
+      loading.classList.remove('d-none');
+      errorBox.classList.add('d-none');
+      resultBox.classList.add('d-none');
+
+      try {
+        const body = new FormData(form);
+        const resp = await fetch(form.dataset.url, { method: 'POST', body });
+        const data = await resp.json();
+
+        loading.classList.add('d-none');
+        btn.disabled = false;
+
+        if (!resp.ok) {
+          errorBox.textContent = '⚠️ ' + (data.error || 'Erreur inconnue.');
+          errorBox.classList.remove('d-none');
+          return;
+        }
+
+        messageEl.textContent = data.message || '';
+        cardsEl.innerHTML = (data.recommandations || []).map(buildCard).join('');
+        conseilEl.textContent = data.conseil ? '💡 ' + data.conseil : '';
+        resultBox.classList.remove('d-none');
+
+        if (!data.recommandations?.length) {
+          cardsEl.innerHTML = '<div class="col-12"><p class="text-muted small">Aucune ressource correspondante trouvée dans la bibliothèque.</p></div>';
+        }
+      } catch (err) {
+        loading.classList.add('d-none');
+        btn.disabled = false;
+        errorBox.textContent = '⚠️ Impossible de contacter le serveur.';
+        errorBox.classList.remove('d-none');
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

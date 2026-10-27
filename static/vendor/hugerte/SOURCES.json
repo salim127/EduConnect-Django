@@ -1,0 +1,12 @@
+{
+  "hugerte": {
+    "version": "1.0.14",
+    "integrity": "sha512-pwJAt+o6PLH2+jJkyl5kHG54GozXfeaXiyF66khdUqiOUijYhXygK1tgktUZYTk+9ALItrTeX9Icj34JHzMA0A=="
+  },
+  "tinymce-i18n": {
+    "version": "26.10.19",
+    "integrity": "sha512-E2/xb9FCytp3LHwn0+OfjnedjXAzOO7aKRPsfECiUmMXVfMtGe+2V6+cF+EJHrS15Otwofhk21fuZ49fqtVWqg==",
+    "file": "langs6/fr_FR.js",
+    "adaptation": "tinymce.addI18n renamed to hugerte.addI18n"
+  }
+}

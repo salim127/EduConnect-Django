@@ -3,15 +3,58 @@
 {% block page_title %}Catégories{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item">Ressources</li><li class="breadcrumb-item active">Catégories</li>{% endblock %}
 {% block content %}
-{% include "components/demo_banner.html" %}
-<div class="page-head"><div><h2>Catégories de ressources</h2><p class="text-muted mb-0">Exemples de classement</p></div>{% include "components/soon_button.html" with label="Ajouter une catégorie" %}</div>
+<div class="page-head">
+  <div>
+    <h2>Catégories de ressources</h2>
+    <p class="text-muted mb-0">{{ categories|length }} catégorie{{ categories|length|pluralize }}</p>
+  </div>
+  {% if perms.ressources.add_categorie %}
+  <a href="{% url 'ressources:categorie_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Ajouter une catégorie
+  </a>
+  {% endif %}
+</div>
+
+<form class="card-x card-pad mb-4 d-flex gap-3 align-items-center" method="get">
+  <div class="topbar-search flex-fill" style="max-width:none">
+    <i class="bi bi-search"></i>
+    <input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Rechercher une catégorie…">
+  </div>
+  <button class="btn btn-soft">Filtrer</button>
+  {% if request.GET.q %}<a href="{% url 'ressources:categories' %}" class="btn btn-soft">Réinitialiser</a>{% endif %}
+</form>
+
 <div class="row g-4">
   {% for c in categories %}
-  <div class="col-md-6 col-xl-4"><div class="card-x hover card-pad h-100 d-flex align-items-center gap-3">
-    <div class="icon-box tone-{{ c.couleur }}"><i class="bi {{ c.icone }}"></i></div>
-    <div class="flex-fill"><strong>{{ c.nom }}</strong><div class="small text-muted">{{ c.nb }} ressources (exemple)</div></div>
-    <span class="badge-demo">Démo</span>
-  </div></div>
+  <div class="col-md-6 col-xl-4">
+    <div class="card-x hover card-pad h-100 d-flex align-items-center gap-3">
+      <div class="icon-box tone-{{ c.couleur }}"><i class="bi {{ c.icone }}"></i></div>
+      <div class="flex-fill">
+        <strong>{{ c.nom }}</strong>
+        <div class="small text-muted">{{ c.nb_ressources }} ressource{{ c.nb_ressources|pluralize }}</div>
+      </div>
+      <div class="d-flex gap-2">
+        {% if perms.ressources.change_categorie %}
+        <a href="{% url 'ressources:categorie_update' c.pk %}" class="btn btn-icon btn-soft btn-sm" title="Modifier">
+          <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+        {% if perms.ressources.delete_categorie %}
+        <button class="btn btn-icon btn-soft btn-sm text-danger"
+          data-bs-toggle="modal" data-bs-target="#deleteModal"
+          data-url="{% url 'ressources:categorie_delete' c.pk %}"
+          data-name="{{ c.nom }}"
+          title="Supprimer">
+          <i class="bi bi-trash"></i>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  {% include "components/empty.html" with icon="bi-tags" title="Aucune catégorie" text="Commencez par créer une catégorie de ressources." %}
   {% endfor %}
 </div>
+
+{% include "components/pagination.html" %}
 {% endblock %}

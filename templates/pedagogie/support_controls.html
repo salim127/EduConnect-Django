@@ -1,0 +1,10 @@
+<div class="d-flex flex-wrap align-items-center gap-2 border rounded p-3 mb-2">
+  <a class="flex-fill small text-break" href="{% url 'pedagogie:support_download' support.pk %}"><i class="bi bi-paperclip me-1"></i>{{ support.nom }}</a>
+  {% if support.masque %}<span class="badge badge-soft badge-amber">Masqué</span>{% endif %}
+  <label class="visually-hidden" for="support-action-{{ support.pk }}">Action pour {{ support.nom }}</label>
+  <select class="form-select form-select-sm" style="width:auto;max-width:100%" name="support_action_{{ support.pk }}" id="support-action-{{ support.pk }}">
+    <option value="show" {% if support.action_selectionnee == 'show' %}selected{% endif %}>Visible aux étudiants</option>
+    <option value="hide" {% if support.action_selectionnee == 'hide' %}selected{% endif %}>Masquer aux étudiants</option>
+    <option value="delete" {% if support.action_selectionnee == 'delete' %}selected{% endif %}>Supprimer à l’enregistrement</option>
+  </select>
+</div>
