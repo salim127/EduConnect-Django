@@ -1,24 +1,34 @@
-import calendar
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.views.generic import TemplateView
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.http import Http404
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView, View
+from django.db import IntegrityError, transaction
+from django.utils.dateparse import parse_datetime
 
-from accounts.roles import is_admin
+from accounts.roles import LEARNER, is_admin
 from config.mixins import QueryStringMixin
 
-from .access import is_manager, managed_sessions, visible_sessions
+from .access import (is_manager, managed_sessions, visible_sessions, managed_availabilities,
+                     managed_exceptions, visible_bookings, visible_actions)
 from . import demo
-from .forms import ConseilPedagogiqueForm, SessionCoachingForm
-from .models import ConseilPedagogique, SessionCoaching
+from .forms import (ConseilPedagogiqueForm, GeneratedAdviceReviewForm, SessionCoachingForm, SessionNotesForm,
+                    CoachAvailabilityForm, AvailabilityExceptionForm, BookingSearchForm,
+                    BookingRequestForm, CoachingActionForm, CoachingActionUpdateForm,
+                    CoachingActionProgressForm)
+from .intelligence import SCHEMAS, generer_brouillon, proposition_en_texte
+from .models import (ConseilPedagogique, SessionCoaching, BookingRequest, CoachAvailability,
+                     CoachAvailabilityException, CoachingAction)
+from .scheduling import TUNIS, available_slots, reserve_booking
 
 MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -56,37 +66,77 @@ def _month_url(month):
 
 class SessionsView(TemplateView):
     template_name = 'coaching/sessions.html'
+    permission_required = 'coaching.view_sessioncoaching'
 
-    def get_context_data(self, **kw):
-        ctx = super().get_context_data(**kw)
-        selected = _parse_month(self.request.GET.get('month'))
-        if selected is None:
-            selected = timezone.localdate().replace(day=1)
-            ctx['calendar_error'] = 'Mois invalide. Le mois courant est affiché.'
-        start, end = _month_window(selected)
-        sessions = visible_sessions(
-            self.request.user,
-            SessionCoaching.objects.select_related('coach', 'etudiant').filter(
-                date_session__gte=start, date_session__lt=end
-            ),
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.has_perm(self.permission_required):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CalendarEventsView(View):
+    permission_required = 'coaching.view_sessioncoaching'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.has_perm(self.permission_required):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        start, end = parse_datetime(request.GET.get('start', '')), parse_datetime(request.GET.get('end', ''))
+        if not start or not end or timezone.is_naive(start) or timezone.is_naive(end) or start >= end or end - start > timedelta(days=93):
+            return JsonResponse({'error': 'Plage de dates invalide.'}, status=400)
+        sessions = visible_sessions(request.user, SessionCoaching.objects.select_related('coach', 'etudiant')).filter(
+            date_session__lt=end, date_session__gte=start - timedelta(days=2)
         )
-        by_day = {}
+        events = []
         for session in sessions:
-            local_start = timezone.localtime(session.date_session)
-            by_day.setdefault(local_start.day, []).append(session)
-        today = timezone.localdate()
-        weeks = []
-        for week in calendar.Calendar(firstweekday=0).monthdayscalendar(selected.year, selected.month):
-            weeks.append([{'n': number, 'sessions': by_day.get(number, []),
-                           'today': bool(number and selected.year == today.year and selected.month == today.month and number == today.day)}
-                          for number in week])
-        previous = (selected - timedelta(days=1)).replace(day=1)
-        next_month = (selected.replace(day=28) + timedelta(days=4)).replace(day=1)
-        ctx.update(weeks=weeks, mois=f'{MOIS[selected.month]} {selected.year}', selected_month=selected,
-                   today=today, sessions_count=sum(map(len, by_day.values())),
-                   previous_url=_month_url(previous), next_url=_month_url(next_month),
-                   can_manage=is_manager(self.request.user))
-        return ctx
+            local_start = timezone.localtime(session.date_session, TUNIS)
+            if local_start + timedelta(minutes=session.duree) <= start:
+                continue
+            events.append({'id': f'session-{session.pk}', 'title': session.titre,
+                           'start': session.date_session.isoformat(),
+                           'end': (session.date_session + timedelta(minutes=session.duree)).isoformat(),
+                           'url': session.get_absolute_url(), 'className': [f'coaching-event-{session.statut}'],
+                           'color': {'planifiee': '#6a56bd', 'terminee': '#218c6a', 'annulee': '#797288'}[session.statut],
+                           'contrastColor': '#ffffff',
+                           'extendedProps': {'kind': 'session', 'status': session.get_statut_display(),
+                                             'duration': session.duree}})
+        bookings = visible_bookings(request.user, BookingRequest.objects.select_related('coach', 'etudiant')).filter(
+            status=BookingRequest.Status.PENDING, requested_start__gte=start - timedelta(days=1), requested_start__lt=end
+        )
+        for item in bookings:
+            events.append({'id': f'booking-{item.pk}', 'title': f'Demande · {item.topic}',
+                           'start': item.requested_start.isoformat(),
+                           'end': (item.requested_start + timedelta(minutes=item.duration)).isoformat(),
+                           'url': reverse('coaching:booking_detail', args=[item.pk]),
+                           'className': ['coaching-event-pending'], 'color': '#946500', 'contrastColor': '#ffffff',
+                           'extendedProps': {'kind': 'booking', 'status': item.get_status_display(),
+                                             'duration': item.duration}})
+        # Recurring availability and exceptions are only visible to their owner/admin.
+        if is_manager(request.user):
+            coaches = [request.user] if not is_admin(request.user) else []
+            windows = CoachAvailability.objects.filter(is_active=True)
+            exceptions = CoachAvailabilityException.objects.all()
+            if coaches:
+                windows, exceptions = windows.filter(coach=request.user), exceptions.filter(coach=request.user)
+            cursor_day = timezone.localtime(start, TUNIS).date()
+            stop_day = timezone.localtime(end, TUNIS).date() + timedelta(days=1)
+            while cursor_day < stop_day:
+                for window in windows.filter(weekday=cursor_day.weekday()):
+                    slot_start = datetime.combine(cursor_day, window.start_time, tzinfo=TUNIS)
+                    slot_end = datetime.combine(cursor_day, window.end_time, tzinfo=TUNIS)
+                    events.append({'id': f'avail-{window.pk}-{cursor_day}', 'title': 'Disponibilité',
+                                   'start': slot_start.isoformat(), 'end': slot_end.isoformat(),
+                                   'display': 'background', 'className': ['coaching-availability'], 'color': '#e7f6f0'})
+                cursor_day += timedelta(days=1)
+            for exception in exceptions.filter(start_datetime__lt=end, end_datetime__gt=start):
+                events.append({'id': f'exception-{exception.pk}', 'title': 'Indisponible',
+                               'start': exception.start_datetime.isoformat(), 'end': exception.end_datetime.isoformat(),
+                               'display': 'background', 'className': ['coaching-unavailable'], 'color': '#f8dfe4'})
+        return JsonResponse(events, safe=False)
 
 
 class ConseilsView(TemplateView):
@@ -192,7 +242,9 @@ class SessionDetailView(CoachingPermissionMixin, SessionVisibleMixin, DetailView
         obj = self.object
         manager = is_manager(self.request.user) and (is_admin(self.request.user) or obj.coach_id == self.request.user.pk)
         context.update(can_manage=manager, can_edit=manager and obj.statut == SessionCoaching.Statut.PLANIFIEE,
-                       can_transition=manager and obj.statut == SessionCoaching.Statut.PLANIFIEE)
+                       can_transition=manager and obj.statut == SessionCoaching.Statut.PLANIFIEE,
+                       can_assign_actions=manager and self.request.user.has_perm('coaching.add_coachingaction'),
+                       coaching_actions=visible_actions(self.request.user, CoachingAction.objects.filter(session=obj).select_related('etudiant')))
         return context
 
 
@@ -344,8 +396,105 @@ class CoachingDashboardView(CoachingPermissionMixin, TemplateView):
             advice_count=advice_count,
             next_session=upcoming.order_by('date_session', 'pk').first(),
             can_manage=is_manager(self.request.user),
+            pending_bookings=visible_bookings(self.request.user).filter(status=BookingRequest.Status.PENDING).count(),
+            open_actions=visible_actions(self.request.user).exclude(status=CoachingAction.Status.COMPLETED).count(),
+            recent_advice=ConseilPedagogique.objects.filter(session__in=sessions).select_related('session').order_by('-date_creation')[:4],
         )
         return context
+
+
+class CoachingAiGenerateView(CoachingManagerMixin, View):
+    """POST-only generation for a session inside the caller's managed scope."""
+    permission_required = 'coaching.view_sessioncoaching'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        session = get_object_or_404(
+            managed_sessions(request.user, SessionCoaching.objects.select_related('coach', 'etudiant')),
+            pk=pk,
+        )
+        mode = request.POST.get('mode', '')
+        if mode not in ('conseil', 'resume'):
+            return render(request, 'coaching/ai_preview.html', {
+                'object': session, 'ai_error': 'Action IA inconnue.', 'ai_mode': mode,
+            }, status=400)
+        if mode == 'conseil' and not request.user.has_perm('coaching.add_conseilpedagogique'):
+            return render(request, 'coaching/ai_preview.html', {
+                'object': session, 'ai_error': 'Vous ne pouvez pas enregistrer un conseil pédagogique.',
+                'ai_mode': mode,
+            }, status=403)
+
+        now = timezone.now().timestamp()
+        last_call = request.session.get('coaching_ai_last_call', 0)
+        if last_call > now - 30:
+            return render(request, 'coaching/ai_preview.html', {
+                'object': session, 'ai_error': 'Attendez 30 secondes avant une nouvelle demande Gemini.',
+                'ai_mode': mode,
+            }, status=429)
+        request.session['coaching_ai_last_call'] = now
+
+        try:
+            data = generer_brouillon(session.notes, mode)
+        except ValueError as error:
+            return render(request, 'coaching/ai_preview.html', {
+                'object': session, 'ai_error': str(error), 'ai_mode': mode,
+            }, status=503 if not settings.GEMINI_API_KEY else 200)
+
+        context = {'object': session, 'ai_mode': mode, 'ai_data': data,
+                   'ai_sections': [(label, data[key]) for key, label in SCHEMAS[mode].items()]}
+        if mode == 'conseil':
+            description = proposition_en_texte(data, mode)
+            context['review_form'] = GeneratedAdviceReviewForm(initial={
+                'titre': f'Conseil pédagogique — {session.titre}'[:200],
+                'description': description,
+                'type_conseil': ConseilPedagogique.TypeConseil.METHODE,
+            })
+        return render(request, 'coaching/ai_preview.html', context)
+
+
+class CoachingAiSaveAdviceView(CoachingManagerMixin, View):
+    """Persist an advice only after a separate, explicit review submission."""
+    permission_required = 'coaching.add_conseilpedagogique'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        session = get_object_or_404(
+            managed_sessions(request.user, SessionCoaching.objects.select_related('coach', 'etudiant')),
+            pk=pk,
+        )
+        form = GeneratedAdviceReviewForm(request.POST)
+        if not form.is_valid():
+            return render(request, 'coaching/ai_preview.html', {
+                'object': session, 'ai_mode': 'conseil', 'review_form': form,
+                'ai_error': 'Vérifiez le titre et le contenu avant l’enregistrement.',
+            }, status=400)
+        advice = ConseilPedagogique(
+            session=session, titre=form.cleaned_data['titre'],
+            description=form.cleaned_data['description'],
+            type_conseil=form.cleaned_data['type_conseil'],
+        )
+        advice.full_clean()
+        advice.save()
+        messages.success(request, 'Conseil relu et enregistré.')
+        return redirect(session)
+
+
+class CoachingSessionNotesView(CoachingManagerMixin, View):
+    permission_required = 'coaching.change_sessioncoaching'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        session = get_object_or_404(
+            managed_sessions(request.user, SessionCoaching.objects.all()), pk=pk,
+        )
+        form = SessionNotesForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, 'Les notes doivent contenir au plus 6 000 caractères.')
+            return redirect(session)
+        session.notes = form.cleaned_data['notes']
+        session.save(update_fields=['notes'])
+        messages.success(request, 'Notes de séance enregistrées.')
+        return redirect(session)
 
 
 class ConseilDetailView(CoachingPermissionMixin, ConseilVisibleMixin, DetailView):
@@ -402,3 +551,306 @@ class ConseilDeleteView(CoachingManagerMixin, ConseilManagedMixin, DeleteView):
     def form_valid(self, form):
         messages.success(self.request, 'Conseil pédagogique supprimé.')
         return super().form_valid(form)
+
+
+class BookingSearchView(CoachingPermissionMixin, TemplateView):
+    permission_required = 'coaching.add_bookingrequest'
+    template_name = 'coaching/booking_search.html'
+
+    def has_permission(self):
+        return super().has_permission() and self.request.user.groups.filter(name=LEARNER).exists()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        form = BookingSearchForm(self.request.GET or None, user=self.request.user)
+        slots = []
+        if form.is_valid():
+            slots = available_slots(form.cleaned_data['coach'], form.cleaned_data['day'],
+                                    form.cleaned_data['duration'], learner=self.request.user)
+        ctx.update(form=form, slots=slots, searched=bool(self.request.GET))
+        return ctx
+
+
+class BookingCreateView(CoachingPermissionMixin, View):
+    permission_required = 'coaching.add_bookingrequest'
+    http_method_names = ['post']
+
+    def has_permission(self):
+        return super().has_permission() and self.request.user.groups.filter(name=LEARNER).exists()
+
+    def post(self, request):
+        form = BookingRequestForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, 'Demande invalide. Recherchez à nouveau un créneau disponible.')
+            return redirect('coaching:booking_search')
+        values = form.cleaned_data
+        coach, start, duration = values['coach'], values['requested_start'], values['duration']
+        local_start = timezone.localtime(start, TUNIS)
+        if local_start not in [slot['start'] for slot in available_slots(coach, local_start.date(), duration, request.user)]:
+            messages.error(request, 'Ce créneau n’est plus disponible. Effectuez une nouvelle recherche.')
+            return redirect('coaching:booking_search')
+        booking = BookingRequest(coach=coach, etudiant=request.user, requested_start=start,
+                                 duration=duration, topic=values['topic'])
+        try:
+            booking.full_clean()
+            booking.save()
+        except (ValidationError, IntegrityError):
+            messages.error(request, 'La demande n’a pas pu être créée : ce créneau vient peut-être d’être réservé.')
+            return redirect('coaching:booking_search')
+        messages.success(request, 'Demande envoyée au coach. Elle réserve le créneau en attendant sa décision.')
+        return redirect('coaching:booking_list')
+
+
+
+class BookingListView(CoachingPermissionMixin, ListView):
+    permission_required = 'coaching.view_bookingrequest'
+    template_name = 'coaching/booking_list.html'
+    context_object_name = 'bookings'
+    paginate_by = 15
+
+    def get_queryset(self):
+        return visible_bookings(self.request.user, BookingRequest.objects.select_related('coach', 'etudiant', 'session'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_book'] = self.request.user.has_perm('coaching.add_bookingrequest') and self.request.user.groups.filter(name=LEARNER).exists()
+        return context
+
+
+class BookingDetailView(CoachingPermissionMixin, DetailView):
+    permission_required = 'coaching.view_bookingrequest'
+    model = BookingRequest
+    template_name = 'coaching/booking_detail.html'
+
+    def get_queryset(self):
+        return visible_bookings(self.request.user, BookingRequest.objects.select_related('coach', 'etudiant', 'session'))
+
+
+class BookingDecisionView(CoachingManagerMixin, View):
+    permission_required = 'coaching.change_bookingrequest'
+    http_method_names = ['post']
+
+    def post(self, request, pk, decision):
+        booking = get_object_or_404(visible_bookings(request.user), pk=pk)
+        if booking.status != BookingRequest.Status.PENDING or (not is_admin(request.user) and booking.coach_id != request.user.pk):
+            raise Http404
+        if decision == 'approve':
+            try:
+                session = reserve_booking(booking)
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+            else:
+                messages.success(request, 'Demande approuvée et séance confirmée.')
+                return redirect(session)
+        elif decision == 'reject':
+            booking.status = BookingRequest.Status.REJECTED
+            booking.full_clean()
+            booking.save(update_fields=['status', 'updated_at'])
+            messages.success(request, 'Demande refusée ; aucune séance n’a été créée.')
+        else:
+            raise Http404
+        return redirect('coaching:booking_detail', pk=pk)
+
+
+class BookingCancelView(CoachingPermissionMixin, View):
+    permission_required = 'coaching.change_bookingrequest'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        booking = get_object_or_404(visible_bookings(request.user), pk=pk)
+        if booking.etudiant_id != request.user.pk or booking.status != BookingRequest.Status.PENDING:
+            raise Http404
+        booking.status = BookingRequest.Status.CANCELLED
+        booking.full_clean()
+        booking.save(update_fields=['status', 'updated_at'])
+        messages.success(request, 'Demande annulée.')
+        return redirect('coaching:booking_list')
+
+
+class AvailabilityListView(CoachingManagerMixin, TemplateView):
+    permission_required = 'coaching.view_coachavailability'
+    template_name = 'coaching/availability.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(availability=managed_availabilities(self.request.user).select_related('coach'),
+                   exceptions=managed_exceptions(self.request.user).select_related('coach'),
+                   upcoming=managed_sessions(self.request.user, SessionCoaching.objects.filter(
+                       statut=SessionCoaching.Statut.PLANIFIEE, date_session__gte=timezone.now()
+                   ).select_related('coach', 'etudiant'))[:8],
+                   availability_form=CoachAvailabilityForm(user=self.request.user), exception_form=AvailabilityExceptionForm(user=self.request.user))
+        return ctx
+
+
+class AvailabilityCreateView(CoachingManagerMixin, View):
+    permission_required = 'coaching.add_coachavailability'
+    http_method_names = ['post']
+
+    def post(self, request):
+        form = CoachAvailabilityForm(request.POST, user=request.user)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.coach = request.user if not is_admin(request.user) else form.cleaned_data.get('coach')
+            if item.coach:
+                self._save(item, request)
+            else:
+                messages.error(request, 'Sélectionnez un coach.')
+        else:
+            messages.error(request, 'Vérifiez les horaires et les chevauchements.')
+        return redirect('coaching:availability')
+
+    @staticmethod
+    def _save(item, request):
+        try:
+            item.full_clean(); item.save()
+        except (ValidationError, IntegrityError):
+            messages.error(request, 'Cette disponibilité est invalide ou chevauche une plage existante.')
+        else:
+            messages.success(request, 'Disponibilité enregistrée.')
+
+
+class AvailabilityUpdateView(CoachingManagerMixin, View):
+    permission_required = 'coaching.change_coachavailability'
+    http_method_names = ['get', 'post']
+
+    def get_queryset(self, user):
+        return managed_availabilities(user)
+
+    def get(self, request, pk):
+        item = get_object_or_404(self.get_queryset(request.user), pk=pk)
+        return render(request, 'coaching/availability_edit.html', {'form': CoachAvailabilityForm(instance=item, user=request.user), 'item': item})
+
+    def post(self, request, pk):
+        item = get_object_or_404(self.get_queryset(request.user), pk=pk)
+        form = CoachAvailabilityForm(request.POST, instance=item, user=request.user)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if not is_admin(request.user):
+                obj.coach = request.user
+            try:
+                obj.full_clean(); obj.save()
+            except (ValidationError, IntegrityError):
+                form.add_error(None, 'Cette plage est invalide ou chevauche une autre disponibilité.')
+            else:
+                messages.success(request, 'Disponibilité mise à jour.')
+                return redirect('coaching:availability')
+        return render(request, 'coaching/availability_edit.html', {'form': form, 'item': item}, status=400)
+
+
+class AvailabilityExceptionCreateView(CoachingManagerMixin, View):
+    permission_required = 'coaching.add_coachavailabilityexception'
+    http_method_names = ['post']
+
+    def post(self, request):
+        form = AvailabilityExceptionForm(request.POST, user=request.user)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.coach = request.user if not is_admin(request.user) else form.cleaned_data.get('coach')
+            if not item.coach:
+                messages.error(request, 'Sélectionnez un coach.')
+                return redirect('coaching:availability')
+            try:
+                item.full_clean(); item.save()
+            except (ValidationError, IntegrityError):
+                messages.error(request, 'Cette période d’indisponibilité est invalide.')
+            else:
+                messages.success(request, 'Période bloquée dans le calendrier.')
+        else:
+            messages.error(request, 'Vérifiez les dates de la période indisponible.')
+        return redirect('coaching:availability')
+
+
+class AvailabilityDeleteView(CoachingManagerMixin, View):
+    permission_required = 'coaching.delete_coachavailability'
+    http_method_names = ['post']
+
+    def post(self, request, kind, pk):
+        model, scope = ((CoachAvailability, managed_availabilities) if kind == 'window' else
+                        (CoachAvailabilityException, managed_exceptions) if kind == 'exception' else (None, None))
+        if model is None:
+            raise Http404
+        item = get_object_or_404(scope(request.user), pk=pk)
+        item.delete()
+        messages.success(request, 'Élément supprimé.')
+        return redirect('coaching:availability')
+
+
+class CoachingActionListView(CoachingPermissionMixin, TemplateView):
+    permission_required = 'coaching.view_coachingaction'
+    template_name = 'coaching/learning_path.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        actions = visible_actions(self.request.user, CoachingAction.objects.select_related('session', 'session__coach'))
+        total, completed = actions.count(), actions.filter(status=CoachingAction.Status.COMPLETED).count()
+        ctx.update(actions=actions, total_actions=total, completed_actions=completed,
+                   progress_percent=round(completed * 100 / total) if total else 0)
+        return ctx
+
+
+class CoachingActionCreateView(CoachingManagerMixin, View):
+    permission_required = 'coaching.add_coachingaction'
+    http_method_names = ['get', 'post']
+
+    def get(self, request, pk):
+        session = get_object_or_404(managed_sessions(request.user, SessionCoaching.objects.all()), pk=pk)
+        return render(request, 'coaching/action_form.html', {'form': CoachingActionForm(), 'session': session})
+
+    def post(self, request, pk):
+        session = get_object_or_404(managed_sessions(request.user, SessionCoaching.objects.all()), pk=pk)
+        form = CoachingActionForm(request.POST)
+        if form.is_valid():
+            action = form.save(commit=False); action.session = session; action.etudiant_id = session.etudiant_id
+            try:
+                action.full_clean(); action.save()
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                messages.success(request, 'Action ajoutée au parcours pédagogique.')
+                return redirect(session)
+        return render(request, 'coaching/action_form.html', {'form': form, 'session': session}, status=400)
+
+
+class CoachingActionUpdateView(CoachingManagerMixin, View):
+    permission_required = 'coaching.change_coachingaction'
+    http_method_names = ['get', 'post']
+
+    def get_queryset(self, user):
+        return visible_actions(user, CoachingAction.objects.select_related('session'))
+
+    def get(self, request, pk):
+        action = get_object_or_404(self.get_queryset(request.user), pk=pk)
+        return render(request, 'coaching/action_form.html', {'form': CoachingActionUpdateForm(instance=action), 'session': action.session, 'action': action})
+
+    def post(self, request, pk):
+        action = get_object_or_404(self.get_queryset(request.user), pk=pk)
+        if not (is_admin(request.user) or action.session.coach_id == request.user.pk):
+            raise Http404
+        form = CoachingActionUpdateForm(request.POST, instance=action)
+        if form.is_valid():
+            obj = form.save(commit=False); obj.full_clean(); obj.save()
+            messages.success(request, 'Action et retour mis à jour.')
+            return redirect(obj.session)
+        return render(request, 'coaching/action_form.html', {'form': form, 'session': action.session, 'action': action}, status=400)
+
+
+class CoachingActionProgressView(CoachingPermissionMixin, View):
+    permission_required = 'coaching.change_coachingaction'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        action = get_object_or_404(visible_actions(request.user), pk=pk)
+        if action.etudiant_id != request.user.pk or action.status == CoachingAction.Status.COMPLETED:
+            raise Http404
+        form = CoachingActionProgressForm(request.POST)
+        target = form.data.get('status')
+        transitions = {CoachingAction.Status.TODO: {CoachingAction.Status.IN_PROGRESS, CoachingAction.Status.COMPLETED},
+                       CoachingAction.Status.IN_PROGRESS: {CoachingAction.Status.COMPLETED}}
+        if not form.is_valid() or target not in transitions.get(action.status, set()):
+            messages.error(request, 'Transition d’avancement invalide.')
+            return redirect('coaching:learning_path')
+        action.status = target
+        action.completed_at = timezone.now() if target == CoachingAction.Status.COMPLETED else None
+        action.full_clean(); action.save(update_fields=['status', 'completed_at', 'updated_at'])
+        messages.success(request, 'Avancement enregistré.')
+        return redirect('coaching:learning_path')

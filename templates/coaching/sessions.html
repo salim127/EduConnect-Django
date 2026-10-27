@@ -1,14 +1,43 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block title %}Calendrier du coaching{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/skeleton.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/theme.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/palettes/purple.css">
+<link rel="stylesheet" href="{% static 'css/coaching.css' %}?v={{ ASSET_V }}">
+{% endblock %}
 {% block page_title %}Calendrier du coaching{% endblock %}
 {% block crumbs %}<li class="breadcrumb-item"><a href="{% url 'coaching:dashboard' %}">Coaching</a></li><li class="breadcrumb-item active">Calendrier</li>{% endblock %}
 {% block content %}
-<div class="page-head"><div><h2>Calendrier des séances</h2><p class="text-muted mb-0">Séances auxquelles vous avez accès · fuseau Africa/Tunis</p></div><div class="d-flex flex-wrap gap-2">{% if can_manage and perms.coaching.add_sessioncoaching %}<a class="btn btn-primary" href="{% url 'coaching:session_create' %}"><i class="bi bi-plus-lg me-1"></i>Planifier une séance</a>{% endif %}<a class="btn btn-soft" href="{% url 'coaching:session_list' %}">Liste des séances</a></div></div>
-{% if calendar_error %}<div class="alert alert-warning" role="alert">{{ calendar_error }}</div>{% endif %}
-<section class="card-x card-pad"><div class="d-flex justify-content-between align-items-center mb-3"><a class="btn btn-soft" href="{{ previous_url }}" aria-label="Mois précédent"><i class="bi bi-chevron-left"></i><span class="d-none d-sm-inline ms-1">Précédent</span></a><h2 class="h4 mb-0" aria-live="polite">{{ mois }}</h2><a class="btn btn-soft" href="{{ next_url }}" aria-label="Mois suivant"><span class="d-none d-sm-inline me-1">Suivant</span><i class="bi bi-chevron-right"></i></a></div>
-<div class="table-responsive"><table class="cal coaching-calendar"><thead><tr>{% for day in "LMMJVSD" %}<th scope="col">{{ day }}</th>{% endfor %}</tr></thead><tbody>
-{% for week in weeks %}<tr>{% for day in week %}<td class="{% if not day.n %}empty-day{% endif %}{% if day.today %} today{% endif %}" {% if not day.n %}aria-hidden="true"{% endif %}>{% if day.n %}<span class="calendar-day-number">{{ day.n }}</span>{% for session in day.sessions %}<a class="calendar-event status-{{ session.statut }}" href="{{ session.get_absolute_url }}" title="{{ session.titre }} · {{ session.get_statut_display }}"><span class="calendar-event-time">{{ session.date_session|date:"H:i" }}</span> {{ session.titre }} <span class="calendar-status">{{ session.get_statut_display }}</span></a>{% endfor %}{% endif %}</td>{% endfor %}</tr>{% endfor %}
-</tbody></table></div>
-{% if not sessions_count %}<div class="alert alert-light text-center mt-3 mb-0">Aucune séance accessible ce mois-ci.</div>{% endif %}
-<div class="d-flex flex-wrap gap-3 mt-3 small"><span><i class="calendar-key status-planifiee"></i> Planifiée</span><span><i class="calendar-key status-terminee"></i> Terminée</span><span><i class="calendar-key status-annulee"></i> Annulée</span></div></section>
+<div class="coaching-shell coaching-agenda">
+  <div class="coaching-heading">
+    <div><span class="coaching-kicker">VOTRE ACCOMPAGNEMENT</span><h2>Un temps pour progresser.</h2><p>Retrouvez vos séances et organisez vos prochains rendez-vous.</p></div>
+    <div class="coaching-agenda-actions"><a class="btn btn-soft" href="{% url 'coaching:booking_list' %}"><i class="bi bi-inbox me-2" aria-hidden="true"></i>Réservations</a>{% if perms.coaching.add_sessioncoaching %}<a class="btn btn-primary" href="{% url 'coaching:session_create' %}"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Planifier une séance</a>{% endif %}</div>
+  </div>
+  <section class="coaching-agenda-card" aria-label="Agenda de coaching">
+    <div class="coaching-agenda-toolbar">
+      <div class="coaching-agenda-period">
+        <div class="coaching-agenda-arrows"><button type="button" data-calendar-nav="prev" aria-label="Période précédente"><i class="bi bi-chevron-left" aria-hidden="true"></i></button><button type="button" data-calendar-nav="next" aria-label="Période suivante"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div>
+        <h2 id="calendar-title" class="h5 mb-0" aria-live="polite">Votre calendrier</h2>
+        <button type="button" class="coaching-agenda-today" data-calendar-nav="today">Aujourd’hui</button>
+      </div>
+      <div class="coaching-agenda-views" role="group" aria-label="Affichage du calendrier">
+        <button type="button" data-calendar-view="dayGridMonth" aria-pressed="true">Mois</button><button type="button" data-calendar-view="timeGridWeek" aria-pressed="false">Semaine</button><button type="button" data-calendar-view="timeGridDay" aria-pressed="false">Jour</button><button type="button" data-calendar-view="listWeek" aria-pressed="false"><i class="bi bi-list-ul me-1" aria-hidden="true"></i>Agenda</button>
+      </div>
+    </div>
+    <div class="coaching-agenda-meta"><span><i class="bi bi-clock me-1" aria-hidden="true"></i>Heure de Tunis <span class="coaching-agenda-zone">· Africa/Tunis</span></span><span id="calendar-count" aria-live="polite">Vos rendez-vous en un coup d’œil</span></div>
+    <div id="calendar-loading" class="coaching-agenda-notice" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Chargement de vos rendez-vous…</div>
+    <div id="calendar-error" class="alert alert-danger m-3 d-none" role="alert">Impossible de charger le calendrier. <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="calendar-retry">Réessayer</button> <a href="{% url 'coaching:session_list' %}">Voir les séances en liste</a></div>
+    <div id="coaching-calendar" data-events-url="{% url 'coaching:calendar_events' %}"></div>
+    <div id="calendar-empty" class="coaching-agenda-empty d-none" role="status"><i class="bi bi-calendar2-check me-2" aria-hidden="true"></i>Aucun rendez-vous sur cette période. Vos prochaines séances apparaîtront ici.</div>
+    <footer class="coaching-agenda-footer"><div class="coaching-agenda-legend"><span><i class="coaching-dot is-planned"></i>Planifiée</span><span><i class="coaching-dot is-completed"></i>Terminée</span><span><i class="coaching-dot is-pending"></i>En attente</span><span><i class="coaching-dot is-cancelled"></i>Annulée</span></div><a href="{% url 'coaching:session_list' %}">Toutes les séances <i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></a></footer>
+    <noscript><div class="alert alert-warning m-3">Activez JavaScript ou consultez la <a href="{% url 'coaching:session_list' %}">liste des séances</a>.</div></noscript>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/monarch/global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales/fr/global.js"></script>
+<script src="{% static 'js/coaching-calendar.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

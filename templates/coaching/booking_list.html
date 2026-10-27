@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Réservations de coaching{% endblock %}
+{% block page_title %}{% if user.groups.first.name == 'Enseignant / Coach' or user.groups.first.name == 'Administrateur' %}Demandes reçues{% else %}Mes réservations{% endif %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/coaching.css' %}?v={{ ASSET_V }}">{% endblock %}
+{% block content %}
+<div class="coaching-shell">
+  <div class="coaching-heading"><div><span class="coaching-kicker">SUIVI</span><h2>Réservations</h2><p>Demandes filtrées selon votre rôle et vos relations de coaching.</p></div>{% if can_book %}<a class="btn btn-primary" href="{% url 'coaching:booking_search' %}">Réserver une séance</a>{% endif %}</div>
+  <div class="coaching-panel table-responsive"><table class="table align-middle"><thead><tr><th>Sujet</th><th>Créneau</th><th>Participants</th><th>Durée</th><th>État</th><th></th></tr></thead><tbody>
+    {% for booking in bookings %}<tr><td>{{ booking.topic }}</td><td>{{ booking.requested_start|date:'d/m/Y H:i' }}</td><td>{{ booking.coach.get_full_name|default:booking.coach.username }} · {{ booking.etudiant.get_full_name|default:booking.etudiant.username }}</td><td>{{ booking.duration }} min</td><td><span class="badge text-bg-{% if booking.status == 'approved' %}success{% elif booking.status == 'pending' %}warning{% elif booking.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ booking.get_status_display }}</span></td><td><a class="btn btn-sm btn-soft" href="{% url 'coaching:booking_detail' booking.pk %}">Détails</a></td></tr>{% empty %}<tr><td colspan="6"><div class="coaching-empty">Aucune demande de réservation.</div></td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

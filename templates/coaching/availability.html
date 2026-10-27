@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Mes disponibilités{% endblock %}
+{% block page_title %}Disponibilités des coachs{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/coaching.css' %}?v={{ ASSET_V }}">{% endblock %}
+{% block content %}
+<div class="coaching-shell">
+  <div class="coaching-heading"><div><span class="coaching-kicker">PLANIFICATION</span><h2>Mes disponibilités</h2><p>Fuseau Africa/Tunis · les périodes bloquées annulent les créneaux récurrents.</p></div><a class="btn btn-soft" href="{% url 'coaching:sessions' %}">Voir le calendrier</a></div>
+  <div class="row g-4">
+    <div class="col-lg-6"><section class="coaching-panel h-100"><h3 class="h5">Ajouter une plage hebdomadaire</h3><form method="post" action="{% url 'coaching:availability_create' %}">{% csrf_token %}{{ availability_form.as_p }}<button class="btn btn-primary">Enregistrer la disponibilité</button></form></section></div>
+    <div class="col-lg-6"><section class="coaching-panel h-100"><h3 class="h5">Bloquer une période</h3><form method="post" action="{% url 'coaching:exception_create' %}">{% csrf_token %}{{ exception_form.as_p }}<button class="btn btn-outline-primary">Ajouter l’indisponibilité</button></form></section></div>
+  </div>
+  <section class="coaching-panel mt-4"><h3 class="h5">Plages hebdomadaires</h3><div class="table-responsive"><table class="table"><thead><tr><th>Coach</th><th>Jour</th><th>Horaires</th><th>État</th><th aria-label="Actions"></th></tr></thead><tbody>
+    {% for item in availability %}<tr><td>{{ item.coach.get_full_name|default:item.coach.username }}</td><td>{{ item.get_weekday_display }}</td><td>{{ item.start_time|time:'H:i' }} – {{ item.end_time|time:'H:i' }}</td><td>{% if item.is_active %}Active{% else %}Inactive{% endif %}</td><td><div class="d-flex gap-2"><a class="btn btn-sm btn-soft" href="{% url 'coaching:availability_update' item.pk %}">Modifier</a><form method="post" action="{% url 'coaching:availability_delete' 'window' item.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Supprimer</button></form></div></td></tr>{% empty %}<tr><td colspan="5">Aucune disponibilité configurée.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="coaching-panel mt-4"><h3 class="h5">Périodes bloquées</h3><div class="table-responsive"><table class="table"><thead><tr><th>Coach</th><th>Période</th><th>Motif</th><th aria-label="Actions"></th></tr></thead><tbody>
+    {% for item in exceptions %}<tr><td>{{ item.coach.get_full_name|default:item.coach.username }}</td><td>{{ item.start_datetime|date:'d/m/Y H:i' }} – {{ item.end_datetime|date:'d/m/Y H:i' }}</td><td>{{ item.reason|default:'—' }}</td><td><form method="post" action="{% url 'coaching:availability_delete' 'exception' item.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Supprimer</button></form></td></tr>{% empty %}<tr><td colspan="4">Aucune période bloquée.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="coaching-panel mt-4"><h3 class="h5">Séances confirmées à venir</h3>{% for session in upcoming %}<p class="mb-2"><a href="{{ session.get_absolute_url }}">{{ session.titre }}</a> · {{ session.date_session|date:'d/m/Y H:i' }}</p>{% empty %}<p class="mb-0 text-muted">Aucune séance à venir.</p>{% endfor %}</section>
+</div>
+{% endblock %}
