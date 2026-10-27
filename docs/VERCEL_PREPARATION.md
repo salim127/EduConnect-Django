@@ -17,6 +17,9 @@ restent inchangés.
 | `GEMINI_API_KEY` | Facultative, dans `.env` ou l'environnement | Secret de l'environnement concerné ; l'IA reste optionnelle |
 | `GEMINI_MODEL` | Défaut existant : `gemini-2.5-flash` | Même valeur par défaut, configurable |
 | `PEDAGOGIE_GEMINI_MODEL` | Défaut existant : `gemini-3.1-flash-lite` | Même valeur par défaut, configurable |
+| `BLOB_READ_WRITE_TOKEN` | Absente : stockage local dans `media/` | Obligatoire pour joindre des documents : jeton d'un Blob Store Vercel public |
+| `BLOB_STORE_ID` | Absente | Facultative : déduite du jeton si elle est absente |
+| `AWS_STORAGE_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_ENDPOINT_URL` | Absentes | Alternative facultative : stockage compatible S3 (Cloudflare R2, MinIO…) |
 | `VERCEL`, `VERCEL_URL` | Non nécessaires | Variables système Vercel ; le domaine de `VERCEL_URL` est ajouté aux hôtes et origines CSRF |
 
 Le chargeur `.env` existant est conservé et étendu à la configuration Django.
@@ -38,20 +41,55 @@ sélectionne Python 3.13, pris en charge par la plateforme.
 
 `STATIC_ROOT` pointe vers `staticfiles/`. WhiteNoise suit immédiatement
 `SecurityMiddleware`. Le stockage local reste standard ; la production utilise
-le stockage WhiteNoise compressé avec manifeste. Le stockage des médias reste
-`FileSystemStorage`, sans substitution automatique.
+le stockage WhiteNoise compressé avec manifeste. Le stockage des médias est
+sélectionné par l'environnement (voir « Stockage des documents de cours »).
 
 Avec l'intégration native, Vercel exécute `collectstatic` au build et distribue
 les statiques via son CDN. Aucune commande `migrate` n'est ajoutée au build, au
 démarrage WSGI ou aux requêtes HTTP.
 
+## Stockage des documents de cours
+
+Le système de fichiers des fonctions Vercel est en lecture seule : toute
+écriture dans `MEDIA_ROOT` échoue avec `OSError: [Errno 30] Read-only file
+system`. Or `SupportCours.fichier` écrit précisément dans ce dossier. La
+sauvegarde d'un cours auquel on joint un document renvoyait donc une erreur
+**500** sur `POST /pedagogie/cours/<pk>/modifier/`.
+
+`config/storage.py` centralise ce point :
+
+| Environnement | Backend retenu | Condition |
+| --- | --- | --- |
+| Vercel / production | `config.storage.VercelBlobStorage` | `BLOB_READ_WRITE_TOKEN` (ou `VERCEL_BLOB_READ_WRITE_TOKEN`) défini |
+| Vercel / production | `storages.backends.s3boto3.S3Boto3Storage` | `AWS_STORAGE_BUCKET_NAME` + `AWS_ACCESS_KEY_ID` définis |
+| Local | `django.core.files.storage.FileSystemStorage` | aucune variable définie |
+
+`VercelBlobStorage` s'appuie sur le SDK officiel `vercel-blob`. Les noms de
+fichiers conservent leur forme habituelle (`cours/<id>/<uuid><extension>`) ;
+les URL publiques sont construites à partir de l'identifiant du store
+(`https://<store-id>.public.blob.vercel-storage.com/<chemin>`). Les documents
+sont servis par la vue `pedagogie:support_download`, qui contrôle les droits
+avant de lire le blob : le store peut rester public sans exposer les documents
+masqués.
+
+À défaut de stockage configuré, une erreur d'écriture n'est plus une erreur
+500 : elle est convertie en message lisible affiché dans le formulaire
+(« Le stockage des documents n'est pas disponible sur cet environnement… »),
+et l'enregistrement du cours est annulé proprement.
+
+**À faire avant publication :** créer un Blob Store public dans le dashboard
+Vercel (Store → Create Blob Store) et définir `BLOB_READ_WRITE_TOKEN` dans les
+variables d'environnement Production. Un store privé reste possible, mais il
+impose des URLs signées et une adaptation de `VercelBlobStorage`.
+
 ## Points bloquants ou à valider avant déploiement
 
-- **Médias utilisateurs** : `SupportCours.fichier` écrit actuellement dans
-  `media/`. Le système de fichiers des fonctions est en lecture seule, sauf
-  `/tmp` temporaire. Il faut approuver puis intégrer un stockage objet persistant
-  (par exemple S3 compatible ou Vercel Blob), avec accès privé, autorisations et
-  URLs signées adaptées. Les téléversements actuels ne sont pas prêts pour Vercel.
+- **Médias utilisateurs** : `SupportCours.fichier` n'écrit plus dans `media/`
+  lorsque `BLOB_READ_WRITE_TOKEN` est défini : le backend Vercel Blob prend le
+  relais et le stockage objet est persistant. Tant qu'aucun Blob Store n'est
+  configuré, la sauvegarde d'un cours avec document échoue proprement (message
+  dans le formulaire, pas de 500) mais aucun document ne peut être joint.
+  **Créer le Blob Store et définir le jeton avant publication.**
 - **Exports** : Word/PowerPoint et certains PDF utilisent des buffers mémoire.
   Un chemin PDF tente aussi un navigateur Chrome/Chromium/Edge et un dossier
   temporaire ; ce navigateur n'est pas garanti sur Vercel. Tester le repli PDF
@@ -76,8 +114,9 @@ démarrage WSGI ou aux requêtes HTTP.
 ## Étapes suivantes, après accord
 
 1. Revoir les différences de cette branche et confirmer les tests locaux.
-2. Choisir le stockage des médias et décider si Preview doit utiliser une branche
-   Neon isolée de Production.
+2. Créer un Blob Store public Vercel pour Production et y définir
+   `BLOB_READ_WRITE_TOKEN` ; décider si Preview doit utiliser un store distinct
+   et une branche Neon isolée de Production.
 3. Connecter le compte GitHub à Vercel et préparer l'import du dépôt à sa racine,
    avec le framework Django, les hôtes et les secrets ci-dessus. **L'import d'un
    projet peut déclencher un premier déploiement : attendre l'autorisation.**
@@ -97,3 +136,5 @@ démarrage WSGI ou aux requêtes HTTP.
 - [Système de fichiers des fonctions](https://vercel.com/docs/functions/runtimes)
 - [En-têtes transmis par Vercel](https://vercel.com/docs/headers/request-headers)
 - [WhiteNoise avec Django](https://whitenoise.readthedocs.io/en/stable/django.html)
+- [Vercel Blob — stockage et API Python](https://vercel.com/docs/vercel-blob)
+- [Vercel Blob — store public](https://vercel.com/docs/vercel-blob/public-storage)
